@@ -9,6 +9,7 @@ import {
   getHourlyCost,
 } from "@/lib/usage-queries";
 import { calculateCost, normalizeModelId } from "@/lib/pricing";
+import { createNotification, hasNotificationToday } from "@/lib/notifications-server";
 import { execSync } from "child_process";
 import path from "path";
 
@@ -116,7 +117,32 @@ export async function GET(request: NextRequest) {
 
     if (!db) {
       try {
-        return NextResponse.json(getLiveUsageFromSessions());
+        const fallback = getLiveUsageFromSessions();
+        const budgetPercent = fallback.thisMonth > 0 && fallback.budget > 0
+          ? (fallback.thisMonth / fallback.budget) * 100
+          : 0;
+        if (budgetPercent >= 100) {
+          const title = "Budget exceeded";
+          if (!(await hasNotificationToday(title))) {
+            await createNotification({
+              title,
+              message: `Monthly cost ($${fallback.thisMonth.toFixed(2)}) has exceeded the budget ($${fallback.budget.toFixed(2)}).`,
+              type: "error",
+              link: "/costs",
+            });
+          }
+        } else if (budgetPercent >= 80) {
+          const title = "Budget warning (80%)";
+          if (!(await hasNotificationToday(title))) {
+            await createNotification({
+              title,
+              message: `Monthly cost is at ${budgetPercent.toFixed(0)}% of budget ($${fallback.thisMonth.toFixed(2)} / $${fallback.budget.toFixed(2)}).`,
+              type: "warning",
+              link: "/costs",
+            });
+          }
+        }
+        return NextResponse.json(fallback);
       } catch {
         return NextResponse.json({
           today: 0,
@@ -141,6 +167,32 @@ export async function GET(request: NextRequest) {
     const hourly = getHourlyCost(db);
 
     db.close();
+
+    // Optional: automatic spending alerts (once per day per threshold)
+    const budgetPercent = summary.thisMonth > 0 && DEFAULT_BUDGET > 0
+      ? (summary.thisMonth / DEFAULT_BUDGET) * 100
+      : 0;
+    if (budgetPercent >= 100) {
+      const title = "Budget exceeded";
+      if (!(await hasNotificationToday(title))) {
+        await createNotification({
+          title,
+          message: `Monthly cost ($${summary.thisMonth.toFixed(2)}) has exceeded the budget ($${DEFAULT_BUDGET.toFixed(2)}).`,
+          type: "error",
+          link: "/costs",
+        });
+      }
+    } else if (budgetPercent >= 80) {
+      const title = "Budget warning (80%)";
+      if (!(await hasNotificationToday(title))) {
+        await createNotification({
+          title,
+          message: `Monthly cost is at ${budgetPercent.toFixed(0)}% of budget ($${summary.thisMonth.toFixed(2)} / $${DEFAULT_BUDGET.toFixed(2)}).`,
+          type: "warning",
+          link: "/costs",
+        });
+      }
+    }
 
     return NextResponse.json({
       ...summary,

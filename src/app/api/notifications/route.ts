@@ -1,43 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
-import { randomUUID } from 'crypto';
-
-const DATA_PATH = path.join(process.cwd(), 'data', 'notifications.json');
-
-export interface Notification {
-  id: string;
-  timestamp: string;
-  title: string;
-  message: string;
-  type: 'info' | 'success' | 'warning' | 'error';
-  read: boolean;
-  link?: string;
-  metadata?: Record<string, unknown>;
-}
+import { loadNotifications, saveNotifications, type Notification } from '@/lib/notifications-server';
 
 interface NotificationsResponse {
   notifications: Notification[];
   unreadCount: number;
-}
-
-async function loadNotifications(): Promise<Notification[]> {
-  try {
-    const data = await fs.readFile(DATA_PATH, 'utf-8');
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
-}
-
-async function saveNotifications(notifications: Notification[]): Promise<void> {
-  const dir = path.dirname(DATA_PATH);
-  try {
-    await fs.access(dir);
-  } catch {
-    await fs.mkdir(dir, { recursive: true });
-  }
-  await fs.writeFile(DATA_PATH, JSON.stringify(notifications, null, 2));
 }
 
 export async function GET(request: NextRequest) {
@@ -97,26 +63,14 @@ export async function POST(request: NextRequest) {
 
     const notifications = await loadNotifications();
 
-    const newNotification: Notification = {
-      id: randomUUID(),
-      timestamp: new Date().toISOString(),
+    const { createNotification } = await import('@/lib/notifications-server');
+    const newNotification = await createNotification({
       title: body.title,
       message: body.message,
       type,
-      read: false,
       link: body.link,
       metadata: body.metadata,
-    };
-
-    // Prepend (newest first)
-    notifications.unshift(newNotification);
-
-    // Keep only last 100 notifications
-    if (notifications.length > 100) {
-      notifications.splice(100);
-    }
-
-    await saveNotifications(notifications);
+    });
 
     return NextResponse.json(newNotification, { status: 201 });
   } catch (error) {

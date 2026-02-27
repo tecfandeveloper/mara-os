@@ -1,5 +1,9 @@
 # 🦞 Mission Control - Roadmap
 
+Estado actual: **Fases 1–4** completas (incl. Analytics, Cost Tracking, Performance Metrics, alertas de gasto); **5.1** (Terminal), **6.1** (Skills viewer), **7** (SSE + Live Logs), **8.1–8.2** (Office 3D MVP + interacciones), **9.4** (Quick Actions) implementados. Ver resumen al final del documento.
+
+---
+
 ## Fase 1: Fundamentos (Semana 1)
 > Mejorar lo que ya existe y añadir datos reales
 
@@ -85,38 +89,42 @@
 ## Fase 4: Analytics (Semana 4)
 > Visualización de datos
 
-### 4.1 Gráficas de Uso
-- [ ] Actividad por hora del día (heatmap)
-- [ ] Tokens consumidos por día (line chart)
-- [ ] Tipos de tareas (pie chart)
-- [ ] Tendencia semanal
+### 4.1 Gráficas de Uso ✅
+- [x] Actividad por hora del día (heatmap) — `HourlyHeatmap` en Analytics
+- [x] Actividad por día (line chart) — `ActivityLineChart`, tendencia 7 días
+- [x] Tipos de tareas (pie chart) — `ActivityPieChart`
+- [x] Tendencia semanal — stats + byDay en `/api/analytics`
+- [x] Tasa de éxito (gauge) — `SuccessRateGauge`
 
-### 4.2 Cost Tracking
-- [ ] Estimación de coste por modelo
-- [ ] Coste acumulado diario/mensual
-- [ ] Alertas de gasto (opcional)
+### 4.2 Cost Tracking ✅
+- [x] Estimación de coste por modelo — `/api/costs`, `src/lib/pricing.ts`
+- [x] Coste acumulado diario/mensual — Costs page: today, yesterday, thisMonth, lastMonth, projected
+- [x] Por agente y por modelo — byAgent, byModel, daily, hourly (Recharts)
+- [x] Budget y alertas visuales — barra de presupuesto con colores (success/warning/error)
+- [x] Alertas de gasto automáticas — notificaciones al 80% y 100% del presupuesto (`src/lib/notifications-server.ts`, integrado en `/api/costs`)
 
-### 4.3 Performance Metrics
-- [ ] Tiempo promedio de respuesta
-- [ ] Tasa de éxito por tipo de tarea
-- [ ] Uptime del agente
+### 4.3 Performance Metrics ✅
+- [x] Tiempo promedio de respuesta — `/api/analytics` (`averageResponseTimeMs`), card en Analytics
+- [x] Tasa de éxito por tipo de tarea — `successRateByType` en API, tabla en Analytics
+- [x] Uptime del agente — `uptimeSeconds` (process.uptime) en API, card "Server uptime" en Analytics
 
 ---
 
 ## Fase 5: Comunicación (Semana 5)
 > Interacción bidireccional
 
-### 5.1 Command Terminal
-- [ ] Input para enviar mensajes/comandos a Tenacitas
-- [ ] Output en tiempo real de respuesta
-- [ ] Historial de comandos
-- [ ] Shortcuts para comandos frecuentes
+### 5.1 Command Terminal ✅
+- [x] Input para enviar mensajes/comandos — Terminal page + `POST /api/terminal`
+- [x] Output de respuesta (stdout/stderr, duration)
+- [x] Historial de comandos — cmdHistory + navegación con flechas
+- [x] Shortcuts para comandos frecuentes — QUICK_COMMANDS (df, free, uptime, git status, etc.)
 
-### 5.2 Notifications Log
-- [ ] Lista de mensajes enviados por canal (Telegram, etc.)
-- [ ] Filtrar por fecha, canal, tipo
-- [ ] Preview del mensaje
-- [ ] Estado de entrega
+### 5.2 Notifications Log ✅
+- [x] Lista de mensajes enviados por canal (Telegram, etc.) — `GET /api/notifications-log`, actividades `message_sent`
+- [x] Filtrar por fecha, canal, tipo — presets (Hoy, 7d, 30d, Todo), dropdown canal y estado
+- [x] Preview del mensaje — columna preview (truncada) + panel expandible con mensaje completo
+- [x] Estado de entrega — badge Entregado / Error / Pendiente / Enviando según `status`
+- **Página:** `src/app/(dashboard)/notifications-log/page.tsx`; **API:** `src/app/api/notifications-log/route.ts`; **Nav:** Sidebar + Dock
 
 ### 5.3 Session History ✅ (nuevo — 2026-02-21)
 - [x] **Lista de sesiones** → todas las sesiones de OpenClaw (main, cron, subagent, chats)
@@ -158,12 +166,13 @@
 ## Fase 6: Configuración (Semana 6)
 > Admin del sistema
 
-### 6.1 Skills Manager
-- [ ] Lista de skills instalados
-- [ ] Ver SKILL.md de cada uno
-- [ ] Activar/desactivar
-- [ ] Instalar desde ClawHub
-- [ ] Actualizar skills
+### 6.1 Skills Manager ✅ (parcial)
+- [x] Lista de skills instalados — Skills page + `GET /api/skills`
+- [x] Ver SKILL.md de cada uno — fullContent, panel lateral con Markdown
+- [x] Filtro por fuente (workspace / system) y búsqueda
+- [ ] Activar/desactivar (futuro)
+- [ ] Instalar desde ClawHub (futuro)
+- [ ] Actualizar skills (futuro)
 
 ### 6.2 Integration Status
 - [ ] Estado de conexiones (Twitter, Gmail, etc.)
@@ -180,41 +189,42 @@
 ---
 
 ## Fase 7: Real-time (Semana 7)
-> WebSockets y notificaciones live
+> SSE y notificaciones live
 
-### 7.1 Live Activity Stream
-- [ ] WebSocket connection
-- [ ] Updates en tiempo real del activity feed
-- [ ] Indicador "Tenacitas está trabajando..."
-- [ ] Toast notifications
+### 7.1 Live Activity Stream ✅ (SSE)
+- [x] SSE connection — `GET /api/activities/stream`
+- [ ] Integración en Dashboard/Activity feed en tiempo real (opcional)
+- [ ] Indicador "Tenacitas está trabajando..." (futuro)
+- [ ] Toast notifications (futuro)
 
-### 7.2 System Status
-- [ ] Heartbeat del agente
-- [ ] CPU/memoria del VPS
-- [ ] Cola de tareas pendientes
+### 7.2 Live Logs ✅
+- [x] Stream de logs en tiempo real — Logs page + `GET /api/logs/stream?service=&backend=`
+- [x] Servicios: mission-control, classvault, content-vault, brain, postiz, openclaw-gateway (systemd/pm2)
+- [x] Start/Stop stream, filtro de texto, auto-scroll, descarga
+- [ ] Heartbeat del agente (parcial vía System)
+- [ ] CPU/memoria del VPS (parcial en System/Quick Actions)
+- [ ] Cola de tareas pendientes (futuro)
 
 ---
 
 ## Fase 8: The Office 3D 🏢 (Semanas 8-10)
 > Entorno 3D navegable que simula una oficina virtual donde trabajan los agentes
 
-**Ver spec completa:** `ROADMAP-OFFICE-3D.md`
+### 8.1 MVP - Oficina Básica (Semana 8) ✅
+- [x] Sala 3D con React Three Fiber + escritorios — `Office3D`, `AgentDesk`, `Floor`, `Walls`, `Lights`
+- [x] Navegación orbit + FPS — `OrbitControls`, `FirstPersonControls` (WASD + mouse)
+- [x] Monitors mostrando estado: Working/Idle — `AgentDesk` + datos de `/api/office`
+- [x] Click en escritorio → panel lateral con activity feed — `AgentPanel`
+- [x] Iluminación (Sky, Environment, Lights)
+- [x] Avatares con emoji — `MovingAvatar`, `AGENTS` config
 
-### 8.1 MVP - Oficina Básica (Semana 8)
-- [ ] Sala 3D con React Three Fiber + 6 escritorios
-- [ ] Navegación WASD + mouse (fly mode)
-- [ ] Monitors mostrando estado: Working/Idle/Error
-- [ ] Click en escritorio → panel lateral con activity feed
-- [ ] Iluminación básica (día/noche)
-- [ ] Avatares simples (cubo/esfera con emoji del agente)
-
-### 8.2 Interactions & Ambient (Semana 9)
-- [ ] Avatares animados (tecleando, pensando, error)
-- [ ] Sub-agents aparecen como "visitantes" en la oficina
-- [ ] Trail visual entre parent y sub-agent
-- [ ] Efectos visuales (partículas success, humo error, beam heartbeat)
-- [ ] Sonido ambiental toggleable (teclas, notificaciones, lofi)
-- [ ] Click en objetos (archivador→Memory, pizarra→Roadmap, café→Mood)
+### 8.2 Interactions & Ambient (Semana 9) ✅ (parcial)
+- [x] Avatares animados — `MovingAvatar`
+- [x] Click en objetos: archivador→Memory, pizarra→Roadmap, café→Mood — `FileCabinet`, `Whiteboard`, `CoffeeMachine`, `PlantPot`, `WallClock`
+- [ ] Sub-agents como "visitantes"
+- [ ] Trail visual parent ↔ sub-agent
+- [ ] Efectos visuales (partículas, humo, beam)
+- [ ] Sonido ambiental toggleable
 
 ### 8.3 Multi-Floor Building (Semana 10)
 - [ ] 4 plantas navegables con ascensor:
@@ -259,17 +269,12 @@
 - [ ] Búsqueda visual
 - [ ] Export a imagen
 
-### 9.4 Quick Actions Hub
-- [ ] Panel de botones para acciones frecuentes:
-  - Backup workspace now
-  - Clear temp files
-  - Test all integrations
-  - Re-authorize expired tokens
-  - Git status all repos
-  - Restart Gateway
-  - Flush message queue
-- [ ] Status de cada acción (last run, next scheduled)
-- [ ] One-click execution con confirmación
+### 9.4 Quick Actions Hub ✅
+- [x] Panel de botones para acciones frecuentes — Actions page + `POST /api/actions`:
+  - Check Heartbeat, Git Status (all repos), Collect Usage Stats
+  - Restart Gateway, Clear Temp Files, NPM Security Audit
+- [x] Resultado por acción (output, duration, status success/error)
+- [x] One-click execution con confirmación para acciones peligrosas (restart gateway, clear temp)
 
 ### 9.5 Model Playground
 - [ ] Input un prompt
@@ -364,6 +369,22 @@
 
 ---
 
+## Funcionalidades adicionales implementadas
+
+> Páginas y APIs añadidas fuera de las fases originales
+
+- **Autenticación** — Login page (`/login`), `POST /api/auth/login`, `POST /api/auth/logout`
+- **Git** — Git page con status por repo, `GET /api/git`, `GET /api/git/log`
+- **Search** — Búsqueda global en workspace, `/search` + `GET /api/search`
+- **System** — System page: info, stats, services, monitor — `/api/system`, `/api/system/stats`, `/api/system/services`, `/api/system/monitor`
+- **Workflows** — Workflows page (`/workflows`) para gestión de flujos
+- **Reports** — Reports page: listar y previsualizar reportes (markdown) desde disco, `GET /api/reports`
+- **Calendar** — Calendar page con vista semanal y eventos de cron (`/api/cron`)
+- **Settings** — Settings page (`/settings`)
+- **About** — About page con branding del agente (`/about`)
+
+---
+
 ## Stack Técnico
 
 | Componente | Tecnología |
@@ -376,7 +397,7 @@
 | 3D Graphics | Three.js o React Three Fiber |
 | Graphs/Networks | Cytoscape.js o Vis.js |
 | Animations | Framer Motion |
-| Storage | JSON files (actual) → SQLite (fase 2) → PostgreSQL (futuro multi-user) |
+| Storage | JSON files + **better-sqlite3** (activities.db, usage-tracking.db) → PostgreSQL (futuro multi-user) |
 | AI Integration | OpenClaw API + direct model calls para suggestions |
 | PDF Generation | jsPDF o Puppeteer |
 
@@ -384,24 +405,24 @@
 
 ## Prioridad Recomendada
 
-### Tier 0: The Flagship 🚀 (Requested by Carlos)
+### Tier 0: The Flagship 🚀 (Requested by Carlos) ✅ MVP listo
 **Fase 8: The Office 3D** - Entorno 3D inmersivo donde visualizar agentes trabajando
-- Empezar por MVP (8.1) → 2 semanas
-- Luego Interactions (8.2) → 1 semana
+- ~~MVP (8.1)~~ ✅ Hecho
+- ~~Interactions (8.2) parcial~~ ✅ Objetos clickeables (archivador, pizarra, café)
 - Multi-Floor (8.3) es opcional/futuro
 
-### Tier 1: Core Functionality (Must Have)
-1. **Fase 1** - Activity Logger Real → sin esto lo demás no tiene sentido
-2. **Fase 3** - Cron Manager completo → uso diario
-3. **Fase 2** - Memory Browser → gestión de conocimiento
+### Tier 1: Core Functionality (Must Have) ✅
+1. **Fase 1** - Activity Logger Real ✅
+2. **Fase 3** - Cron Manager completo ✅
+3. **Fase 2** - Memory Browser ✅
 
-### Tier 2: High Value (Should Have)
-4. **Fase 5** - Command Terminal + Session History → interacción directa
-5. **Fase 9.4** - Quick Actions Hub → productividad inmediata
-6. **Fase 10.1** - Sub-Agent Dashboard → visibilidad de workflows
+### Tier 2: High Value (Should Have) — mayoría hecha
+4. **Fase 5** - Command Terminal ✅ + Session History ✅ + Notifications Log ✅
+5. **Fase 9.4** - Quick Actions Hub ✅
+6. **Fase 10.1** - Sub-Agent Dashboard → pendiente
 
 ### Tier 3: Intelligence & Insights (Nice to Have)
-7. **Fase 4** - Analytics básicos → métricas
+7. **Fase 4** - Analytics básicos → métricas ✅
 8. **Fase 9.2** - Token Economics → optimización de costes
 9. **Fase 9.6** - Smart Suggestions → IA que se auto-mejora
 
@@ -423,4 +444,6 @@
 ---
 
 *Creado: 2026-02-07*
-*Última actualización: 2026-02-27 (Fase 3 Cron Manager completada)*
+*Última actualización: 2026-02-27*
+
+**Resumen de estado:** Fases 1–4 completas (Analytics, Cost Tracking, Performance Metrics, alertas de gasto automáticas). Fase 5 (Terminal, Session History, Notifications Log) completa. Fase 6.1 Skills (lista + viewer). Fase 7 (SSE activity stream + Live Logs). Fase 8 (Office 3D MVP + interacciones parciales). Fase 9.4 Quick Actions. Session History, Notifications, Auth, Git, Search, System, Workflows, Reports, Calendar, Settings y About implementados.

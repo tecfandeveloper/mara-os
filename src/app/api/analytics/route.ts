@@ -6,21 +6,31 @@ import { promises as fs } from "fs";
 
 const DB_PATH = path.join(process.cwd(), "data", "activities.db");
 
+interface ActivityRow {
+  type: string;
+  status: string;
+  timestamp: string;
+  duration_ms?: number | null;
+}
+
 interface AnalyticsData {
   byDay: { date: string; count: number }[];
   byType: { type: string; count: number }[];
   byHour: { hour: number; day: number; count: number }[];
   successRate: number;
+  averageResponseTimeMs: number | null;
+  successRateByType: { type: string; total: number; success: number; successRate: number }[];
+  uptimeSeconds: number;
 }
 
 export async function GET(): Promise<NextResponse<AnalyticsData>> {
   // Try SQLite first, fallback to JSON
-  let activities: Array<{ type: string; status: string; timestamp: string }> = [];
+  let activities: ActivityRow[] = [];
 
   try {
     await fs.access(DB_PATH);
     const db = new Database(DB_PATH);
-    const rows = db.prepare("SELECT type, status, timestamp FROM activities ORDER BY timestamp DESC").all() as Array<{ type: string; status: string; timestamp: string }>;
+    const rows = db.prepare("SELECT type, status, timestamp, duration_ms FROM activities ORDER BY timestamp DESC").all() as ActivityRow[];
     db.close();
     activities = rows;
   } catch {
@@ -28,7 +38,8 @@ export async function GET(): Promise<NextResponse<AnalyticsData>> {
     try {
       const { readFileSync } = await import("fs");
       const jsonPath = path.join(process.cwd(), "data", "activities.json");
-      activities = JSON.parse(readFileSync(jsonPath, "utf-8"));
+      const data = JSON.parse(readFileSync(jsonPath, "utf-8"));
+      activities = Array.isArray(data) ? data : [];
     } catch {}
   }
 
@@ -81,5 +92,43 @@ export async function GET(): Promise<NextResponse<AnalyticsData>> {
   const successCount = activities.filter((a) => a.status === "success").length;
   const successRate = activities.length > 0 ? (successCount / activities.length) * 100 : 0;
 
-  return NextResponse.json({ byDay, byType, byHour, successRate });
+  // Average response time (only activities with duration_ms)
+  const withDuration = activities.filter((a) => a.duration_ms != null && a.duration_ms > 0);
+  const averageResponseTimeMs =
+    withDuration.length > 0
+      ? withDuration.reduce((s, a) => s + (a.duration_ms ?? 0), 0) / withDuration.length
+      : null;
+
+  // Success rate by type (normalize type names like in byType)
+  const normalizeType = (t: string) =>
+    t === "cron_run" ? "cron" : t === "file_read" || t === "file_write" ? "file" : t === "web_search" ? "search" : t === "message_sent" ? "message" : t === "tool_call" || t === "agent_action" ? "task" : t;
+  const byTypeMap = new Map<string, { total: number; success: number }>();
+  activities.forEach((a) => {
+    const type = normalizeType(a.type);
+    const cur = byTypeMap.get(type) ?? { total: 0, success: 0 };
+    cur.total += 1;
+    if (a.status === "success") cur.success += 1;
+    byTypeMap.set(type, cur);
+  });
+  const successRateByType = Array.from(byTypeMap.entries())
+    .map(([type, { total, success }]) => ({
+      type,
+      total,
+      success,
+      successRate: total > 0 ? (success / total) * 100 : 0,
+    }))
+    .sort((a, b) => b.total - a.total);
+
+  // Server uptime (Mission Control process)
+  const uptimeSeconds = process.uptime();
+
+  return NextResponse.json({
+    byDay,
+    byType,
+    byHour,
+    successRate,
+    averageResponseTimeMs,
+    successRateByType,
+    uptimeSeconds,
+  });
 }

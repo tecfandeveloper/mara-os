@@ -279,3 +279,12 @@ export function getActivityStats(): {
 
   return { total, today, thisWeek, byType, byStatus };
 }
+
+/** Distinct channel (agent) values for activities of type message_sent / message. Used for Notifications Log filter. */
+export function getDistinctChannelsForMessageLog(): string[] {
+  const db = getDb();
+  const rows = db.prepare(
+    `SELECT DISTINCT agent FROM activities WHERE type IN ('message', 'message_sent') AND agent IS NOT NULL AND agent != '' ORDER BY agent`
+  ).all() as Array<{ agent: string }>;
+  return rows.map((r) => r.agent);
+}

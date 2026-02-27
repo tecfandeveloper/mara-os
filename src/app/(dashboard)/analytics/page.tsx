@@ -5,13 +5,27 @@ import { ActivityLineChart } from "@/components/charts/ActivityLineChart";
 import { ActivityPieChart } from "@/components/charts/ActivityPieChart";
 import { HourlyHeatmap } from "@/components/charts/HourlyHeatmap";
 import { SuccessRateGauge } from "@/components/charts/SuccessRateGauge";
-import { BarChart3, TrendingUp, Clock, Target } from "lucide-react";
+import { BarChart3, TrendingUp, Clock, Target, Gauge, Activity, Server } from "lucide-react";
 
 interface AnalyticsData {
   byDay: { date: string; count: number }[];
   byType: { type: string; count: number }[];
   byHour: { hour: number; day: number; count: number }[];
   successRate: number;
+  averageResponseTimeMs: number | null;
+  successRateByType: { type: string; total: number; success: number; successRate: number }[];
+  uptimeSeconds: number;
+}
+
+function formatUptime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return "—";
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m`;
+  return `${Math.round(seconds)}s`;
 }
 
 export default function AnalyticsPage() {
@@ -111,6 +125,92 @@ export default function AnalyticsPage() {
             {data.successRate.toFixed(0)}%
           </p>
         </div>
+      </div>
+
+      {/* Performance Metrics */}
+      <div className="mb-4 md:mb-6">
+        <h2
+          className="text-lg md:text-xl font-bold mb-3 md:mb-4"
+          style={{ color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}
+        >
+          Performance Metrics
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4">
+          <div
+            className="rounded-xl p-3 md:p-4 flex items-center gap-3"
+            style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}
+          >
+            <Gauge className="w-8 h-8 shrink-0" style={{ color: "var(--accent)" }} />
+            <div>
+              <p className="text-xs md:text-sm mb-0.5" style={{ color: "var(--text-secondary)" }}>Avg. response time</p>
+              <p className="text-lg md:text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+                {data.averageResponseTimeMs != null
+                  ? data.averageResponseTimeMs >= 1000
+                    ? `${(data.averageResponseTimeMs / 1000).toFixed(1)}s`
+                    : `${Math.round(data.averageResponseTimeMs)}ms`
+                  : "—"}
+              </p>
+            </div>
+          </div>
+          <div
+            className="rounded-xl p-3 md:p-4 flex items-center gap-3"
+            style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}
+          >
+            <Server className="w-8 h-8 shrink-0" style={{ color: "var(--accent)" }} />
+            <div>
+              <p className="text-xs md:text-sm mb-0.5" style={{ color: "var(--text-secondary)" }}>Server uptime</p>
+              <p className="text-lg md:text-xl font-bold" style={{ color: "var(--text-primary)" }}>
+                {formatUptime(data.uptimeSeconds ?? 0)}
+              </p>
+            </div>
+          </div>
+          <div
+            className="rounded-xl p-3 md:p-4 flex items-center gap-3"
+            style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}
+          >
+            <Activity className="w-8 h-8 shrink-0" style={{ color: "var(--accent)" }} />
+            <div>
+              <p className="text-xs md:text-sm mb-0.5" style={{ color: "var(--text-secondary)" }}>Success by type</p>
+              <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                {(data.successRateByType ?? []).length} activity types
+              </p>
+            </div>
+          </div>
+        </div>
+        {(data.successRateByType ?? []).length > 0 && (
+          <div
+            className="rounded-xl p-4 md:p-6"
+            style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}
+          >
+            <h3 className="text-base font-semibold mb-3" style={{ color: "var(--text-primary)" }}>
+              Success rate by task type
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                    <th className="text-left py-2 pr-4" style={{ color: "var(--text-secondary)" }}>Type</th>
+                    <th className="text-right py-2 pr-4" style={{ color: "var(--text-secondary)" }}>Total</th>
+                    <th className="text-right py-2 pr-4" style={{ color: "var(--text-secondary)" }}>Success</th>
+                    <th className="text-right py-2" style={{ color: "var(--text-secondary)" }}>Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data.successRateByType ?? []).map((row) => (
+                    <tr key={row.type} style={{ borderBottom: "1px solid var(--border)" }}>
+                      <td className="py-2 pr-4 capitalize" style={{ color: "var(--text-primary)" }}>{row.type}</td>
+                      <td className="py-2 pr-4 text-right" style={{ color: "var(--text-primary)" }}>{row.total}</td>
+                      <td className="py-2 pr-4 text-right" style={{ color: "var(--success)" }}>{row.success}</td>
+                      <td className="py-2 text-right font-medium" style={{ color: row.successRate >= 80 ? "var(--success)" : row.successRate >= 50 ? "var(--warning)" : "var(--error)" }}>
+                        {row.successRate.toFixed(0)}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Charts Grid */}
