@@ -57,3 +57,6 @@ next-env.d.ts
 
 # backup files
 *.bak
+
+# cursor files
+.cursor/
