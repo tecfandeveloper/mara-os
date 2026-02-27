@@ -10,6 +10,8 @@ import {
   ExternalLink,
   FileText,
   X,
+  Download,
+  Upload,
 } from "lucide-react";
 import { SectionHeader, MetricCard } from "@/components/TenacitOS";
 
@@ -25,6 +27,7 @@ interface Skill {
   fullContent: string;
   files: string[];
   agents: string[];
+  enabled?: boolean;
 }
 
 interface SkillsData {
@@ -36,13 +39,97 @@ export default function SkillsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSource, setFilterSource] = useState<"all" | "workspace" | "system">("all");
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [clawhubSkills, setClawhubSkills] = useState<Array<{ id: string; name: string; description: string; source: string; url?: string }>>([]);
+  const [installingId, setInstallingId] = useState<string | null>(null);
+  const [installMessage, setInstallMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [updateAlling, setUpdateAlling] = useState(false);
+  const [updateResults, setUpdateResults] = useState<Record<string, { ok: boolean; message?: string }>>({});
 
-  useEffect(() => {
-    fetch("/api/skills")
+  const fetchSkills = () => {
+    return fetch("/api/skills")
       .then((res) => res.json())
       .then(setData)
       .catch(() => setData({ skills: [] }));
+  };
+
+  useEffect(() => {
+    fetchSkills();
   }, []);
+
+  useEffect(() => {
+    fetch("/api/skills/clawhub")
+      .then((res) => res.json())
+      .then((d) => setClawhubSkills(d.skills || []))
+      .catch(() => setClawhubSkills([]));
+  }, []);
+
+  const handleUpdate = async (skillId?: string) => {
+    if (skillId) setUpdatingId(skillId);
+    else setUpdateAlling(true);
+    setUpdateResults({});
+    try {
+      const res = await fetch("/api/skills/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(skillId ? { id: skillId } : {}),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Update failed");
+      const next: Record<string, { ok: boolean; message?: string }> = {};
+      for (const r of data.results || []) {
+        next[r.id] = { ok: r.ok, message: r.message };
+      }
+      setUpdateResults(next);
+      await fetchSkills();
+    } catch (e) {
+      setUpdateResults({ _error: { ok: false, message: e instanceof Error ? e.message : "Update failed" } });
+    } finally {
+      setUpdatingId(null);
+      setUpdateAlling(false);
+    }
+  };
+
+  const handleInstall = async (item: { id: string; name: string; url?: string }) => {
+    if (!item.url) return;
+    setInstallingId(item.id);
+    setInstallMessage(null);
+    try {
+      const res = await fetch("/api/skills/install", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idOrName: item.id, source: "git", url: item.url }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Install failed");
+      setInstallMessage({ type: "success", text: data.message || "Skill installed." });
+      await fetchSkills();
+    } catch (e) {
+      setInstallMessage({ type: "error", text: e instanceof Error ? e.message : "Install failed" });
+    } finally {
+      setInstallingId(null);
+    }
+  };
+
+  const handleToggle = async (skill: Skill) => {
+    const nextEnabled = !(skill.enabled !== false);
+    setTogglingId(skill.id);
+    try {
+      const res = await fetch("/api/skills/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: skill.id, enabled: nextEnabled }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || "Toggle failed");
+      await fetchSkills();
+      setSelectedSkill((prev) => (prev?.id === skill.id ? { ...prev, enabled: nextEnabled } : prev));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   if (!data) {
     return (
@@ -227,8 +314,133 @@ export default function SkillsPage() {
           >
             System ({systemCount})
           </button>
+          <button
+            onClick={() => handleUpdate()}
+            disabled={updateAlling}
+            style={{
+              padding: "12px 20px",
+              borderRadius: "6px",
+              backgroundColor: "var(--surface)",
+              color: "var(--text-secondary)",
+              border: "1px solid var(--border)",
+              fontFamily: "var(--font-body)",
+              fontSize: "12px",
+              fontWeight: 600,
+              cursor: updateAlling ? "wait" : "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <Upload style={{ width: "16px", height: "16px" }} />
+            {updateAlling ? "Actualizando…" : "Actualizar todos"}
+          </button>
         </div>
       </div>
+
+      {updateResults._error && (
+        <p
+          style={{
+            marginBottom: "16px",
+            padding: "12px",
+            borderRadius: "8px",
+            backgroundColor: "var(--surface-elevated)",
+            color: "var(--text-muted)",
+            fontSize: "13px",
+          }}
+        >
+          Error: {updateResults._error.message}
+        </p>
+      )}
+
+      {/* Install from ClawHub */}
+      {clawhubSkills.length > 0 && (
+        <div style={{ marginBottom: "24px" }}>
+          <SectionHeader label="INSTALAR DESDE CLAWHUB" />
+          {installMessage && (
+            <p
+              style={{
+                marginTop: "8px",
+                fontSize: "13px",
+                color: installMessage.type === "success" ? "var(--accent)" : "var(--text-muted)",
+              }}
+            >
+              {installMessage.text}
+            </p>
+          )}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: "12px",
+              marginTop: "16px",
+            }}
+          >
+            {clawhubSkills.map((item) => {
+              const alreadyInstalled = skills.some((s) => s.id === item.id);
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    backgroundColor: "var(--surface)",
+                    borderRadius: "8px",
+                    padding: "16px",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <div style={{ marginBottom: "8px" }}>
+                    <div
+                      style={{
+                        fontFamily: "var(--font-heading)",
+                        fontSize: "14px",
+                        fontWeight: 600,
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      {item.name}
+                    </div>
+                    <p
+                      style={{
+                        fontFamily: "var(--font-body)",
+                        fontSize: "12px",
+                        color: "var(--text-secondary)",
+                        marginTop: "4px",
+                      }}
+                    >
+                      {item.description}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={installingId === item.id || alreadyInstalled}
+                    onClick={() => handleInstall(item)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "8px 14px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      border: "1px solid var(--border)",
+                      backgroundColor: alreadyInstalled ? "var(--surface-elevated)" : "var(--accent-soft)",
+                      color: alreadyInstalled ? "var(--text-muted)" : "var(--accent)",
+                      cursor: alreadyInstalled ? "default" : "pointer",
+                    }}
+                  >
+                    {installingId === item.id ? (
+                      <RefreshCw style={{ width: "14px", height: "14px", animation: "spin 1s linear infinite" }} />
+                    ) : (
+                      <Download style={{ width: "14px", height: "14px" }} />
+                    )}
+                    {alreadyInstalled ? "Instalado" : "Instalar"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Skills List */}
       {filteredSkills.length === 0 ? (
@@ -265,7 +477,16 @@ export default function SkillsPage() {
                 }}
               >
                 {workspaceSkills.map((skill) => (
-                  <SkillCard key={skill.id} skill={skill} onClick={() => setSelectedSkill(skill)} />
+                  <SkillCard
+                    key={skill.id}
+                    skill={skill}
+                    onClick={() => setSelectedSkill(skill)}
+                    onToggle={() => handleToggle(skill)}
+                    toggling={togglingId === skill.id}
+                    onUpdate={() => handleUpdate(skill.id)}
+                    updating={updatingId === skill.id}
+                    updateResult={updateResults[skill.id]}
+                  />
                 ))}
               </div>
             </div>
@@ -284,7 +505,16 @@ export default function SkillsPage() {
                 }}
               >
                 {systemSkills.map((skill) => (
-                  <SkillCard key={skill.id} skill={skill} onClick={() => setSelectedSkill(skill)} />
+                  <SkillCard
+                    key={skill.id}
+                    skill={skill}
+                    onClick={() => setSelectedSkill(skill)}
+                    onToggle={() => handleToggle(skill)}
+                    toggling={togglingId === skill.id}
+                    onUpdate={() => handleUpdate(skill.id)}
+                    updating={updatingId === skill.id}
+                    updateResult={updateResults[skill.id]}
+                  />
                 ))}
               </div>
             </div>
@@ -293,30 +523,58 @@ export default function SkillsPage() {
       )}
 
       {/* Detail Modal */}
-      {selectedSkill && <SkillDetailModal skill={selectedSkill} onClose={() => setSelectedSkill(null)} />}
+      {selectedSkill && (
+        <SkillDetailModal
+          skill={selectedSkill}
+          onClose={() => setSelectedSkill(null)}
+          onToggle={() => handleToggle(selectedSkill)}
+          toggling={togglingId === selectedSkill.id}
+          onUpdate={() => handleUpdate(selectedSkill.id)}
+          updating={updatingId === selectedSkill.id}
+          updateResult={updateResults[selectedSkill.id]}
+        />
+      )}
     </div>
   );
 }
 
 // Skill Card Component
-function SkillCard({ skill, onClick }: { skill: Skill; onClick: () => void }) {
+function SkillCard({
+  skill,
+  onClick,
+  onToggle,
+  toggling,
+  onUpdate,
+  updating,
+  updateResult,
+}: {
+  skill: Skill;
+  onClick: () => void;
+  onToggle: () => void;
+  toggling: boolean;
+  onUpdate: () => void;
+  updating: boolean;
+  updateResult?: { ok: boolean; message?: string };
+}) {
+  const enabled = skill.enabled !== false;
   return (
     <div
       style={{
-        backgroundColor: "var(--surface)",
+        backgroundColor: enabled ? "var(--surface)" : "var(--surface-elevated)",
         borderRadius: "8px",
         padding: "16px",
-        border: "1px solid var(--border)",
+        border: `1px solid ${enabled ? "var(--border)" : "var(--border-strong)"}`,
         cursor: "pointer",
         transition: "all 150ms ease",
+        opacity: enabled ? 1 : 0.85,
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.backgroundColor = "var(--surface-hover)";
         e.currentTarget.style.borderColor = "var(--border-strong)";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = "var(--surface)";
-        e.currentTarget.style.borderColor = "var(--border)";
+        e.currentTarget.style.backgroundColor = enabled ? "var(--surface)" : "var(--surface-elevated)";
+        e.currentTarget.style.borderColor = enabled ? "var(--border)" : "var(--border-strong)";
       }}
       onClick={onClick}
     >
@@ -415,16 +673,90 @@ function SkillCard({ skill, onClick }: { skill: Skill; onClick: () => void }) {
             {skill.fileCount} files
           </span>
         </div>
-        {skill.homepage && (
-          <ExternalLink style={{ width: "14px", height: "14px", color: "var(--text-muted)" }} />
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {skill.homepage && (
+            <ExternalLink style={{ width: "14px", height: "14px", color: "var(--text-muted)" }} />
+          )}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle();
+            }}
+            disabled={toggling}
+            title={enabled ? "Desactivar" : "Activar"}
+            style={{
+              padding: "4px 10px",
+              borderRadius: "6px",
+              fontSize: "11px",
+              fontWeight: 600,
+              border: "1px solid var(--border)",
+              backgroundColor: enabled ? "var(--accent-soft)" : "var(--surface-elevated)",
+              color: enabled ? "var(--accent)" : "var(--text-muted)",
+              cursor: toggling ? "wait" : "pointer",
+            }}
+          >
+            {toggling ? "…" : enabled ? "On" : "Off"}
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdate();
+            }}
+            disabled={updating}
+            title="Actualizar (git pull)"
+            style={{
+              padding: "4px 8px",
+              borderRadius: "6px",
+              fontSize: "10px",
+              fontWeight: 600,
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--surface-elevated)",
+              color: "var(--text-secondary)",
+              cursor: updating ? "wait" : "pointer",
+            }}
+          >
+            {updating ? "…" : "Actualizar"}
+          </button>
+        </div>
       </div>
+      {updateResult && (
+        <div
+          style={{
+            fontSize: "10px",
+            marginTop: "8px",
+            paddingTop: "8px",
+            borderTop: "1px solid var(--border)",
+            color: updateResult.ok ? "var(--accent)" : "var(--text-muted)",
+          }}
+        >
+          {updateResult.ok ? "OK" : updateResult.message}
+        </div>
+      )}
     </div>
   );
 }
 
 // Skill Detail Modal Component
-function SkillDetailModal({ skill, onClose }: { skill: Skill; onClose: () => void }) {
+function SkillDetailModal({
+  skill,
+  onClose,
+  onToggle,
+  toggling,
+  onUpdate,
+  updating,
+  updateResult,
+}: {
+  skill: Skill;
+  onClose: () => void;
+  onToggle: () => void;
+  toggling: boolean;
+  onUpdate: () => void;
+  updating: boolean;
+  updateResult?: { ok: boolean; message?: string };
+}) {
+  const enabled = skill.enabled !== false;
   return (
     <div
       style={{
@@ -500,9 +832,53 @@ function SkillDetailModal({ skill, onClose }: { skill: Skill; onClose: () => voi
               >
                 {skill.description}
               </p>
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
                 <div className="badge-positive">{skill.source}</div>
                 <div className="badge-info">{skill.fileCount} archivos</div>
+                <button
+                  type="button"
+                  onClick={onToggle}
+                  disabled={toggling}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    border: "1px solid var(--border)",
+                    backgroundColor: enabled ? "var(--accent-soft)" : "var(--surface-elevated)",
+                    color: enabled ? "var(--accent)" : "var(--text-muted)",
+                    cursor: toggling ? "wait" : "pointer",
+                  }}
+                >
+                  {toggling ? "…" : enabled ? "Activo" : "Desactivado"} — clic para cambiar
+                </button>
+                <button
+                  type="button"
+                  onClick={onUpdate}
+                  disabled={updating}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    border: "1px solid var(--border)",
+                    backgroundColor: "var(--surface-elevated)",
+                    color: "var(--text-secondary)",
+                    cursor: updating ? "wait" : "pointer",
+                  }}
+                >
+                  {updating ? "…" : "Actualizar (git pull)"}
+                </button>
+                {updateResult && (
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      color: updateResult.ok ? "var(--accent)" : "var(--text-muted)",
+                    }}
+                  >
+                    {updateResult.ok ? "OK" : updateResult.message}
+                  </span>
+                )}
                 {skill.agents && skill.agents.length > 0 && skill.agents.map((agent) => (
                   <div
                     key={agent}

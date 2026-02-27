@@ -5,6 +5,7 @@ import { Settings, RefreshCw } from "lucide-react";
 import { SystemInfo } from "@/components/SystemInfo";
 import { IntegrationStatus } from "@/components/IntegrationStatus";
 import { QuickActions } from "@/components/QuickActions";
+import { ConfigViewer } from "@/components/ConfigViewer";
 
 interface SystemData {
   agent: {
@@ -32,6 +33,7 @@ interface SystemData {
     status: "connected" | "disconnected" | "configured" | "not_configured";
     icon: string;
     lastActivity: string | null;
+    detail?: string | null;
   }>;
   timestamp: string;
 }
@@ -113,12 +115,20 @@ export default function SettingsPage() {
 
         {/* Integration Status */}
         <div>
-          <IntegrationStatus integrations={systemData?.integrations || null} />
+          <IntegrationStatus
+          integrations={systemData?.integrations || null}
+          onRefresh={handleRefresh}
+        />
         </div>
 
         {/* Quick Actions */}
         <div>
           <QuickActions onActionComplete={handleRefresh} />
+        </div>
+
+        {/* OpenClaw Config (read-only) */}
+        <div className="lg:col-span-2">
+          <ConfigViewer onRefresh={handleRefresh} />
         </div>
       </div>
 
