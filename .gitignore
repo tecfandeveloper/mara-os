@@ -40,6 +40,10 @@ yarn-error.log*
 /data/*.db
 /data/*.sqlite
 /data/*.sqlite3
+/data/*.db-shm
+/data/*.db-wal
+/data/*.sqlite-shm
+/data/*.sqlite-wal
 
 # vercel
 .vercel
