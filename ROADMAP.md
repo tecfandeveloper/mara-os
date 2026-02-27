@@ -25,21 +25,21 @@
 > Gestión visual del workspace
 
 ### 2.1 Memory Browser
-- [ ] Vista árbol de `memory/*.md` y archivos principales
-- [ ] Editor markdown con preview
-- [ ] Crear/renombrar/eliminar archivos
-- [ ] Búsqueda dentro de archivos
+- [x] Vista árbol de `memory/*.md` y archivos principales
+- [x] Editor markdown con preview
+- [x] Crear/renombrar/eliminar archivos
+- [x] Búsqueda dentro de archivos
 
 ### 2.2 File Browser
-- [ ] Explorador del workspace completo
-- [ ] Preview de archivos (código, markdown, JSON)
-- [ ] Descargar archivos
-- [ ] Upload de archivos
+- [x] Explorador del workspace completo
+- [x] Preview de archivos (código, markdown, JSON)
+- [x] Descargar archivos
+- [x] Upload de archivos
 
 ### 2.3 MEMORY.md Viewer
-- [ ] Vista especial para MEMORY.md con secciones colapsables
-- [ ] Edición inline
-- [ ] Historial de cambios (git log)
+- [x] Vista especial para MEMORY.md con secciones colapsables
+- [x] Edición inline
+- [x] Historial de cambios (git log)
 
 ---
 

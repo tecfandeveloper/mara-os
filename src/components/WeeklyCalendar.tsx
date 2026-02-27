@@ -145,39 +145,39 @@ export function WeeklyCalendar() {
             Loading cron jobs…
           </div>
         ) : (
-        hours.filter(h => h >= 6 && h <= 22).map((hour) => (
-          <div key={hour} className="grid grid-cols-8 border-b border-gray-800 last:border-b-0">
-            <div className="p-2 text-xs text-gray-500 text-right pr-3 border-r border-gray-800">
-              {format(new Date().setHours(hour, 0), "HH:mm")}
+          hours.filter((h) => h >= 6 && h <= 22).map((hour) => (
+            <div key={hour} className="grid grid-cols-8 border-b border-gray-800 last:border-b-0">
+              <div className="p-2 text-xs text-gray-500 text-right pr-3 border-r border-gray-800">
+                {format(new Date().setHours(hour, 0), "HH:mm")}
+              </div>
+              {days.map((day) => {
+                const dayTasks = getTasksForDayAndHour(day, hour);
+                return (
+                  <div
+                    key={`${day.toISOString()}-${hour}`}
+                    className={`p-1 min-h-[48px] border-r border-gray-800 last:border-r-0 ${
+                      isSameDay(day, new Date()) ? "bg-emerald-500/5" : ""
+                    }`}
+                  >
+                    {dayTasks.map((task) => (
+                      <div
+                        key={task.id}
+                        className="bg-emerald-600/20 border-l-2 border-emerald-500 px-2 py-1 rounded text-xs mb-1"
+                      >
+                        <div className="font-medium text-emerald-400 truncate">
+                          {task.name}
+                        </div>
+                        <div className="text-gray-500 truncate">
+                          {task.schedule}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
             </div>
-            {days.map((day) => {
-              const dayTasks = getTasksForDayAndHour(day, hour);
-              return (
-                <div
-                  key={`${day.toISOString()}-${hour}`}
-                  className={`p-1 min-h-[48px] border-r border-gray-800 last:border-r-0 ${
-                    isSameDay(day, new Date()) ? "bg-emerald-500/5" : ""
-                  }`}
-                >
-                  {dayTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="bg-emerald-600/20 border-l-2 border-emerald-500 px-2 py-1 rounded text-xs mb-1"
-                    >
-                      <div className="font-medium text-emerald-400 truncate">
-                        {task.name}
-                      </div>
-                      <div className="text-gray-500 truncate">
-                        {task.schedule}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      )}
+          ))
+        )}
       </div>
     </div>
   );

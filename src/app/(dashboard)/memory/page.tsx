@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Eye, Edit3, RefreshCw, Brain } from "lucide-react";
+import { Eye, Edit3, RefreshCw, Brain, Search, FilePlus, X } from "lucide-react";
 import { FileTree, FileNode } from "@/components/FileTree";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { MarkdownPreview } from "@/components/MarkdownPreview";
+import { MemoryMdViewer } from "@/components/MemoryMdViewer";
+import { useDebounce } from "@/hooks/useDebounce";
 
 type ViewMode = "edit" | "preview";
 
@@ -14,6 +16,14 @@ interface Workspace {
   emoji: string;
   path: string;
   agentName?: string;
+}
+
+interface SearchResultItem {
+  file: string;
+  title: string;
+  snippet: string;
+  matches: number;
+  path: string;
 }
 
 export default function MemoryPage() {
@@ -26,7 +36,13 @@ export default function MemoryPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("preview");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [newFileName, setNewFileName] = useState("");
+  const [showNewFile, setShowNewFile] = useState(false);
 
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const hasUnsavedChanges = content !== originalContent;
 
   // Load workspaces
@@ -118,6 +134,111 @@ export default function MemoryPage() {
       if (firstFile) handleSelectFile(firstFile.path);
     }
   }, [files, selectedPath, handleSelectFile]);
+
+  // Search in memory files
+  useEffect(() => {
+    if (debouncedSearch.length < 2 || !selectedWorkspace) {
+      setSearchResults([]);
+      return;
+    }
+    const q = encodeURIComponent(debouncedSearch);
+    const w = encodeURIComponent(selectedWorkspace);
+    fetch(`/api/memory/search?q=${q}&workspace=${w}`)
+      .then((res) => res.json())
+      .then((data) => setSearchResults(data.results || []))
+      .catch(() => setSearchResults([]));
+  }, [debouncedSearch, selectedWorkspace]);
+
+  const handleNewFile = useCallback(async () => {
+    if (!selectedWorkspace) return;
+    const name = newFileName.trim();
+    if (!name) return;
+    const path = name.endsWith(".md") ? `memory/${name}` : `memory/${name}.md`;
+    try {
+      const res = await fetch("/api/files", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspace: selectedWorkspace, path, content: "" }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Failed to create file");
+        return;
+      }
+      setNewFileName("");
+      setShowNewFile(false);
+      await loadFileTree(selectedWorkspace);
+      setSelectedPath(path);
+      await loadFile(selectedWorkspace, path);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to create file");
+    }
+  }, [selectedWorkspace, newFileName, loadFileTree, loadFile]);
+
+  const handleRename = useCallback(
+    async (node: FileNode) => {
+      if (!selectedWorkspace || node.type === "folder") return;
+      const newName = window.prompt("New name (e.g. 2025-02-27.md):", node.name);
+      if (!newName || newName.trim() === node.name) return;
+      const trimmed = newName.trim();
+      const newPath = node.path.startsWith("memory/") ? `memory/${trimmed}` : trimmed;
+      if (!newPath.endsWith(".md")) {
+        alert("Only .md files are allowed.");
+        return;
+      }
+      try {
+        const res = await fetch("/api/files/rename", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workspace: selectedWorkspace, path: node.path, newPath }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          alert(data.error || "Rename failed");
+          return;
+        }
+        await loadFileTree(selectedWorkspace);
+        if (selectedPath === node.path) {
+          setSelectedPath(newPath);
+          await loadFile(selectedWorkspace, newPath);
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Rename failed");
+      }
+    },
+    [selectedWorkspace, selectedPath, loadFileTree, loadFile]
+  );
+
+  const handleDelete = useCallback(
+    async (node: FileNode) => {
+      if (!selectedWorkspace || node.type === "folder") return;
+      if (!window.confirm(`Delete "${node.name}"? This cannot be undone.`)) return;
+      try {
+        const res = await fetch("/api/files/delete", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workspace: selectedWorkspace, path: node.path }),
+        });
+        if (!res.ok) {
+          const data = await res.json();
+          alert(data.error || "Delete failed");
+          return;
+        }
+        await loadFileTree(selectedWorkspace);
+        if (selectedPath === node.path) {
+          setSelectedPath(null);
+          setContent("");
+          setOriginalContent("");
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Delete failed");
+      }
+    },
+    [selectedWorkspace, selectedPath, loadFileTree]
+  );
 
   const selectedWorkspaceData = workspaces.find((w) => w.id === selectedWorkspace);
 
@@ -250,23 +371,27 @@ export default function MemoryPage() {
                   backgroundColor: "var(--surface, var(--card))",
                   flexShrink: 0,
                   gap: "12px",
+                  flexWrap: "wrap",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Brain style={{ width: "16px", height: "16px", color: "var(--accent)" }} />
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0, flex: 1 }}>
+                  <Brain style={{ width: "16px", height: "16px", color: "var(--accent)", flexShrink: 0 }} />
                   <span
                     style={{
                       fontFamily: "var(--font-heading)",
                       fontSize: "13px",
                       fontWeight: 600,
                       color: "var(--text-primary)",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
                     }}
                   >
                     {selectedWorkspaceData.name}
                   </span>
                   {selectedPath && (
                     <>
-                      <span style={{ color: "var(--text-muted)", fontSize: "13px" }}>/</span>
+                      <span style={{ color: "var(--text-muted)", fontSize: "13px", flexShrink: 0 }}>/</span>
                       <span
                         style={{
                           fontFamily: "var(--font-mono)",
@@ -275,7 +400,7 @@ export default function MemoryPage() {
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
-                          maxWidth: "300px",
+                          maxWidth: "200px",
                         }}
                       >
                         {selectedPath}
@@ -284,29 +409,80 @@ export default function MemoryPage() {
                   )}
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
-                  {/* Refresh */}
-                  <button
-                    onClick={() => selectedWorkspace && loadFileTree(selectedWorkspace)}
-                    title="Refresh"
-                    style={{
-                      padding: "5px 7px",
-                      borderRadius: "6px",
-                      backgroundColor: "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      color: "var(--text-muted)",
-                      display: "flex",
-                      alignItems: "center",
-                      transition: "all 120ms ease",
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-primary)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; }}
-                  >
-                    <RefreshCw size={14} />
-                  </button>
+                {/* Search */}
+                <div style={{ position: "relative", flexShrink: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                    <Search style={{ width: "14px", height: "14px", color: "var(--text-muted)" }} />
+                    <input
+                      type="text"
+                      placeholder="Search in files..."
+                      value={searchQuery}
+                      onChange={(e) => { setSearchQuery(e.target.value); setSearchOpen(true); }}
+                      onFocus={() => setSearchOpen(true)}
+                      style={{
+                        width: "160px",
+                        padding: "4px 8px",
+                        fontSize: "12px",
+                        borderRadius: "6px",
+                        border: "1px solid var(--border)",
+                        backgroundColor: "var(--bg)",
+                        color: "var(--text-primary)",
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                  {searchOpen && searchResults.length > 0 && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "100%",
+                        left: 0,
+                        marginTop: "4px",
+                        width: "320px",
+                        maxHeight: "280px",
+                        overflowY: "auto",
+                        backgroundColor: "var(--card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "8px",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
+                        zIndex: 100,
+                      }}
+                    >
+                      {searchResults.map((r) => (
+                        <button
+                          key={`${r.path}-${r.file}`}
+                          type="button"
+                          onClick={() => {
+                            handleSelectFile(r.path);
+                            setSearchResults([]);
+                            setSearchQuery("");
+                            setSearchOpen(false);
+                          }}
+                          style={{
+                            display: "block",
+                            width: "100%",
+                            padding: "8px 12px",
+                            textAlign: "left",
+                            border: "none",
+                            borderBottom: "1px solid var(--border)",
+                            backgroundColor: "transparent",
+                            color: "var(--text-primary)",
+                            cursor: "pointer",
+                            fontSize: "12px",
+                          }}
+                        >
+                          <span style={{ fontWeight: 600, color: "var(--accent)" }}>{r.path}</span>
+                          <div style={{ marginTop: "2px", color: "var(--text-secondary)", fontSize: "11px" }}>
+                            {r.snippet}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-                  {/* View toggle */}
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                  {selectedPath !== "MEMORY.md" && (
                   <div
                     style={{
                       display: "flex",
@@ -357,6 +533,26 @@ export default function MemoryPage() {
                       Edit
                     </button>
                   </div>
+                  )}
+                  <button
+                    onClick={() => selectedWorkspace && loadFileTree(selectedWorkspace)}
+                    title="Refresh"
+                    style={{
+                      padding: "5px 7px",
+                      borderRadius: "6px",
+                      backgroundColor: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--text-muted)",
+                      display: "flex",
+                      alignItems: "center",
+                      transition: "all 120ms ease",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-primary)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; }}
+                  >
+                    <RefreshCw size={14} />
+                  </button>
                 </div>
               </div>
 
@@ -368,20 +564,112 @@ export default function MemoryPage() {
                     width: "230px",
                     flexShrink: 0,
                     borderRight: "1px solid var(--border)",
-                    overflowY: "auto",
+                    display: "flex",
+                    flexDirection: "column",
+                    overflow: "hidden",
                   }}
                 >
-                  {isLoading ? (
-                    <div style={{ padding: "24px", textAlign: "center", color: "var(--text-secondary)" }}>
-                      Loading...
-                    </div>
-                  ) : error && files.length === 0 ? (
-                    <div style={{ padding: "24px", textAlign: "center", color: "var(--negative)" }}>
-                      {error}
-                    </div>
-                  ) : (
-                    <FileTree files={files} selectedPath={selectedPath} onSelect={handleSelectFile} />
-                  )}
+                  <div style={{ padding: "8px 12px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+                    {!showNewFile ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowNewFile(true)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "6px 10px",
+                          fontSize: "12px",
+                          fontWeight: 500,
+                          color: "var(--accent)",
+                          backgroundColor: "transparent",
+                          border: "1px dashed var(--border)",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          width: "100%",
+                        }}
+                      >
+                        <FilePlus size={14} />
+                        New file
+                      </button>
+                    ) : (
+                      <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                        <input
+                          type="text"
+                          placeholder="e.g. 2025-02-27.md"
+                          value={newFileName}
+                          onChange={(e) => setNewFileName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleNewFile();
+                            if (e.key === "Escape") { setShowNewFile(false); setNewFileName(""); }
+                          }}
+                          autoFocus
+                          style={{
+                            flex: 1,
+                            padding: "6px 8px",
+                            fontSize: "12px",
+                            borderRadius: "6px",
+                            border: "1px solid var(--border)",
+                            backgroundColor: "var(--bg)",
+                            color: "var(--text-primary)",
+                            outline: "none",
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleNewFile}
+                          style={{
+                            padding: "6px 10px",
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            color: "var(--bg)",
+                            backgroundColor: "var(--accent)",
+                            border: "none",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Create
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setShowNewFile(false); setNewFileName(""); }}
+                          style={{
+                            padding: "4px",
+                            color: "var(--text-muted)",
+                            backgroundColor: "transparent",
+                            border: "none",
+                            borderRadius: "4px",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ flex: 1, overflowY: "auto" }}>
+                    {isLoading ? (
+                      <div style={{ padding: "24px", textAlign: "center", color: "var(--text-secondary)" }}>
+                        Loading...
+                      </div>
+                    ) : error && files.length === 0 ? (
+                      <div style={{ padding: "24px", textAlign: "center", color: "var(--negative)" }}>
+                        {error}
+                      </div>
+                    ) : (
+                      <FileTree
+                        files={files}
+                        selectedPath={selectedPath}
+                        onSelect={handleSelectFile}
+                        onRename={handleRename}
+                        onDelete={handleDelete}
+                      />
+                    )}
+                  </div>
                 </div>
 
                 {/* Editor / Preview */}
@@ -396,8 +684,33 @@ export default function MemoryPage() {
                   }}
                 >
                   {selectedPath ? (
-                    <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-                      {viewMode === "edit" ? (
+                    <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                      {selectedPath === "MEMORY.md" ? (
+                        <MemoryMdViewer
+                          content={content}
+                          workspace={selectedWorkspace!}
+                          filePath="MEMORY.md"
+                          onSave={async (newContent) => {
+                            if (!selectedWorkspace) return;
+                            const res = await fetch("/api/files", {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                workspace: selectedWorkspace,
+                                path: "MEMORY.md",
+                                content: newContent,
+                              }),
+                            });
+                            if (res.ok) {
+                              setContent(newContent);
+                              setOriginalContent(newContent);
+                            } else {
+                              throw new Error("Failed to save");
+                            }
+                          }}
+                          hasUnsavedChanges={hasUnsavedChanges}
+                        />
+                      ) : viewMode === "edit" ? (
                         <MarkdownEditor
                           content={content}
                           onChange={setContent}

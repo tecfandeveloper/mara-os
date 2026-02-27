@@ -22,3 +22,19 @@ export const ALLOWED_MEDIA_PREFIXES = [
   path.join(OPENCLAW_WORKSPACE, '/'),
   path.join(OPENCLAW_MEDIA, '/'),
 ];
+
+/**
+ * Resolve workspace id to absolute base path.
+ * Accepts any single path segment (e.g. "workspace", "workspace-academic").
+ * Returns null if workspace id is invalid (traversal, slashes).
+ */
+export function getWorkspaceBase(workspaceId: string): string | null {
+  if (!workspaceId || typeof workspaceId !== 'string') return null;
+  const trimmed = workspaceId.trim();
+  if (trimmed.includes('..') || trimmed.includes('/') || path.isAbsolute(trimmed)) return null;
+  const base = path.join(OPENCLAW_DIR, trimmed);
+  const resolvedOpenClaw = path.resolve(OPENCLAW_DIR);
+  const resolvedBase = path.resolve(base);
+  if (!resolvedBase.startsWith(resolvedOpenClaw)) return null;
+  return base;
+}

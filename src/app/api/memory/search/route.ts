@@ -1,13 +1,11 @@
 /**
  * Memory full-text search API
- * GET /api/memory/search?q=<query>
+ * GET /api/memory/search?q=<query>&workspace=<id>
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
-
-const OPENCLAW_DIR = process.env.OPENCLAW_DIR || '/root/.openclaw';
-const WORKSPACE = path.join(OPENCLAW_DIR, 'workspace');
+import { getWorkspaceBase } from '@/lib/paths';
 
 interface SearchResult {
   file: string;
@@ -56,24 +54,22 @@ async function searchFile(filePath: string, query: string, displayPath: string):
   }
 }
 
-async function getFiles(): Promise<Array<{ path: string; display: string }>> {
+async function getFiles(workspacePath: string): Promise<Array<{ path: string; display: string }>> {
   const files: Array<{ path: string; display: string }> = [];
 
-  // Root workspace files
   const rootFiles = ['MEMORY.md', 'SOUL.md', 'USER.md', 'AGENTS.md', 'TOOLS.md', 'IDENTITY.md', 'HEARTBEAT.md'];
   for (const f of rootFiles) {
-    const full = path.join(WORKSPACE, f);
+    const full = path.join(workspacePath, f);
     try {
       await fs.access(full);
       files.push({ path: full, display: f });
     } catch {}
   }
 
-  // Memory directory
   try {
-    const memDir = path.join(WORKSPACE, 'memory');
+    const memDir = path.join(workspacePath, 'memory');
     const memFiles = await fs.readdir(memDir);
-    for (const f of memFiles.sort().reverse().slice(0, 30)) { // last 30 days
+    for (const f of memFiles.sort().reverse().slice(0, 30)) {
       if (f.endsWith('.md')) {
         files.push({ path: path.join(memDir, f), display: `memory/${f}` });
       }
@@ -86,13 +82,19 @@ async function getFiles(): Promise<Array<{ path: string; display: string }>> {
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('q')?.trim() || '';
+  const workspace = searchParams.get('workspace')?.trim() || 'workspace';
 
   if (query.length < 2) {
     return NextResponse.json({ results: [], query });
   }
 
+  const workspacePath = getWorkspaceBase(workspace);
+  if (!workspacePath) {
+    return NextResponse.json({ results: [], query });
+  }
+
   try {
-    const files = await getFiles();
+    const files = await getFiles(workspacePath);
     const results = await Promise.all(files.map((f) => searchFile(f.path, query, f.display)));
     const sorted = results
       .filter(Boolean)
