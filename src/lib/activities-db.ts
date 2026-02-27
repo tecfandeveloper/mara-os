@@ -113,6 +113,7 @@ export function logActivity(
   description: string,
   status: string,
   opts?: {
+    timestamp?: string | null;
     duration_ms?: number | null;
     tokens_used?: number | null;
     agent?: string | null;
@@ -121,7 +122,9 @@ export function logActivity(
 ): Activity {
   const db = getDb();
   const id = randomUUID();
-  const timestamp = new Date().toISOString();
+  const timestamp = opts?.timestamp && opts.timestamp.trim() !== ''
+    ? opts.timestamp
+    : new Date().toISOString();
 
   db.prepare(`
     INSERT INTO activities (id, timestamp, type, description, status, duration_ms, tokens_used, agent, metadata)

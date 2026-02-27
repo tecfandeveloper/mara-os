@@ -4,10 +4,10 @@
 > Mejorar lo que ya existe y añadir datos reales
 
 ### 1.1 Activity Logger Real
-- [ ] Crear endpoint POST `/api/activities` para que Tenacitas registre acciones
-- [ ] Hook en OpenClaw para loguear automáticamente cada tool call
-- [ ] Campos: timestamp, type, description, status, duration, tokens_used
-- [ ] Retención: últimos 30 días
+- [x] Crear endpoint POST `/api/activities` para que Tenacitas registre acciones
+- [x] Hook en OpenClaw para loguear automáticamente cada tool call (documentado en `docs/api/activities.md` y `docs/openclaw/log-activity.md`; implementación del hook en código OpenClaw)
+- [x] Campos: timestamp, type, description, status, duration, tokens_used
+- [x] Retención: últimos 30 días
 
 ### 1.2 Integración con Cron Real
 - [ ] Leer cron jobs reales de OpenClaw (`cron list`)

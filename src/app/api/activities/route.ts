@@ -67,7 +67,27 @@ export async function POST(request: Request) {
       );
     }
 
+    let timestamp: string | null = null;
+    if (body.timestamp != null && typeof body.timestamp === 'string' && body.timestamp.trim() !== '') {
+      const ts = body.timestamp.trim();
+      const date = new Date(ts);
+      if (Number.isNaN(date.getTime())) {
+        return NextResponse.json(
+          { error: 'Invalid timestamp: must be a valid ISO 8601 date string' },
+          { status: 400 }
+        );
+      }
+      if (date.getTime() > Date.now()) {
+        return NextResponse.json(
+          { error: 'Invalid timestamp: cannot be in the future' },
+          { status: 400 }
+        );
+      }
+      timestamp = date.toISOString();
+    }
+
     const activity = logActivity(body.type, body.description, body.status, {
+      timestamp,
       duration_ms: body.duration_ms ?? null,
       tokens_used: body.tokens_used ?? null,
       agent: body.agent ?? null,
