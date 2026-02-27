@@ -63,7 +63,7 @@ function LoginForm() {
               letterSpacing: '-0.5px'
             }}
           >
-            Mission Control
+            Mara
           </h1>
         </div>
         <p 
@@ -127,7 +127,7 @@ function LoginForm() {
         className="text-center text-xs mt-6"
         style={{ color: 'var(--text-muted)' }}
       >
-        Tenacitas Agent Dashboard
+        Mara Agent Dashboard
       </p>
     </div>
   );

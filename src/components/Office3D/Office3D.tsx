@@ -2,7 +2,7 @@
 
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Sky, Environment } from '@react-three/drei';
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Vector3 } from 'three';
 import { AGENTS } from './agentsConfig';
 import type { AgentState } from './agentsConfig';
@@ -24,16 +24,49 @@ export default function Office3D() {
   const [interactionModal, setInteractionModal] = useState<string | null>(null);
   const [controlMode, setControlMode] = useState<'orbit' | 'fps'>('orbit');
   const [avatarPositions, setAvatarPositions] = useState<Map<string, any>>(new Map());
-  
-  // Mock data - TODO: Replace with real API data
-  const [agentStates] = useState<Record<string, AgentState>>({
-    main: { id: 'main', status: 'working', currentTask: 'Procesando emails', model: 'opus', tokensPerHour: 15000, tasksInQueue: 3, uptime: 12 },
-    academic: { id: 'academic', status: 'idle', model: 'sonnet', tokensPerHour: 0, tasksInQueue: 0, uptime: 8 },
-    studio: { id: 'studio', status: 'thinking', currentTask: 'Generando guión YouTube', model: 'opus', tokensPerHour: 8000, tasksInQueue: 1, uptime: 5 },
-    linkedin: { id: 'linkedin', status: 'working', currentTask: 'Redactando post', model: 'sonnet', tokensPerHour: 5000, tasksInQueue: 2, uptime: 10 },
-    social: { id: 'social', status: 'idle', model: 'sonnet', tokensPerHour: 0, tasksInQueue: 0, uptime: 7 },
-    infra: { id: 'infra', status: 'error', currentTask: 'Failed deployment', model: 'haiku', tokensPerHour: 1000, tasksInQueue: 0, uptime: 15 },
-  });
+  const [officeAgents, setOfficeAgents] = useState<Array<{ id: string; name: string; emoji: string; color: string; role: string; currentTask: string; isActive: boolean }>>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      try {
+        const res = await fetch('/api/office', { cache: 'no-store' });
+        const json = await res.json();
+        if (mounted) setOfficeAgents(Array.isArray(json.agents) ? json.agents : []);
+      } catch {
+        if (mounted) setOfficeAgents([]);
+      }
+    }
+    void load();
+    const t = setInterval(load, 5000);
+    return () => {
+      mounted = false;
+      clearInterval(t);
+    };
+  }, []);
+
+  const layoutAgents = useMemo(() => {
+    return AGENTS.map((slot, idx) => {
+      const live = officeAgents[idx];
+      if (!live) return slot;
+      return { ...slot, id: live.id, name: live.name, emoji: live.emoji, color: live.color, role: live.role };
+    }).slice(0, Math.max(1, officeAgents.length || 1));
+  }, [officeAgents]);
+
+  const agentStates = useMemo<Record<string, AgentState>>(() => {
+    const map: Record<string, AgentState> = {};
+    for (const a of officeAgents) {
+      map[a.id] = {
+        id: a.id,
+        status: a.isActive ? 'working' : 'idle',
+        currentTask: a.currentTask,
+      };
+    }
+    if (!Object.keys(map).length) {
+      map.main = { id: 'main', status: 'idle', currentTask: 'SLEEPING' };
+    }
+    return map;
+  }, [officeAgents]);
 
   const handleDeskClick = (agentId: string) => {
     setSelectedAgent(agentId);
@@ -66,7 +99,7 @@ export default function Office3D() {
   // Definir obstáculos (muebles)
   const obstacles = [
     // Escritorios (6)
-    ...AGENTS.map(agent => ({
+    ...layoutAgents.map(agent => ({
       position: new Vector3(agent.position[0], 0, agent.position[2]),
       radius: 1.5
     })),
@@ -111,7 +144,7 @@ export default function Office3D() {
           <Walls />
 
           {/* Escritorios de agentes (sin avatares) */}
-          {AGENTS.map((agent) => (
+          {layoutAgents.map((agent) => (
             <AgentDesk
               key={agent.id}
               agent={agent}
@@ -122,7 +155,7 @@ export default function Office3D() {
           ))}
 
           {/* Avatares móviles */}
-          {AGENTS.map((agent) => (
+          {layoutAgents.map((agent) => (
             <MovingAvatar
               key={`avatar-${agent.id}`}
               agent={agent}
@@ -177,7 +210,7 @@ export default function Office3D() {
       {/* Panel lateral cuando se selecciona un agente */}
       {selectedAgent && (
         <AgentPanel
-          agent={AGENTS.find(a => a.id === selectedAgent)!}
+          agent={layoutAgents.find(a => a.id === selectedAgent)!}
           state={agentStates[selectedAgent]}
           onClose={handleClosePanel}
         />
@@ -226,7 +259,7 @@ export default function Office3D() {
                     <ul className="space-y-2">
                       <li className="flex items-center gap-2">
                         <span className="text-green-400">✓</span>
-                        <span>Phase 0: TenacitOS Shell</span>
+                        <span>Phase 0: Mara OS Shell</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <span className="text-yellow-400">●</span>

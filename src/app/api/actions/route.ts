@@ -82,7 +82,6 @@ async function runAction(action: string): Promise<ActionResult> {
       case 'heartbeat': {
         // Check all critical services
         const services = ['mission-control'];
-        const pm2services = ['classvault', 'content-vault', 'brain'];
         const results: string[] = [];
 
         for (const svc of services) {
@@ -91,24 +90,13 @@ async function runAction(action: string): Promise<ActionResult> {
           results.push(`${status === 'active' ? '✅' : '❌'} ${svc}: ${status}`);
         }
 
+        // Ping current Mara OS URL
+        const target = process.env.MARA_OS_URL || 'http://127.0.0.1:3000';
         try {
-          const { stdout: pm2 } = await execAsync('pm2 jlist 2>/dev/null');
-          const pm2list = JSON.parse(pm2);
-          for (const svc of pm2services) {
-            const proc = pm2list.find((p: { name: string }) => p.name === svc);
-            const status = proc?.pm2_env?.status || 'not found';
-            results.push(`${status === 'online' ? '✅' : '❌'} ${svc} (pm2): ${status}`);
-          }
+          const { stdout: ping } = await execAsync(`curl -s -o /dev/null -w "%{http_code}" --max-time 5 ${target}`);
+          results.push(`\n🌐 Mara OS (${target}): HTTP ${ping.trim()}`);
         } catch {
-          results.push('⚠️ PM2: could not connect');
-        }
-
-        // Ping the main site
-        try {
-          const { stdout: ping } = await execAsync('curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://tenacitas.cazaustre.dev');
-          results.push(`\n🌐 tenacitas.cazaustre.dev: HTTP ${ping.trim()}`);
-        } catch {
-          results.push('\n🌐 tenacitas.cazaustre.dev: unreachable');
+          results.push(`\n🌐 Mara OS (${target}): unreachable`);
         }
 
         output = results.join('\n');

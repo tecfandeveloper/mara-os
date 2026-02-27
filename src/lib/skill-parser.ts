@@ -38,8 +38,12 @@ interface SkillsConfig {
 }
 
 const CONFIG_PATH = path.join(process.cwd(), 'data', 'configured-skills.json');
-const DEFAULT_SYSTEM_PATH = '/usr/lib/node_modules/openclaw/skills';
-const DEFAULT_WORKSPACE_PATH = (process.env.OPENCLAW_DIR || '/root/.openclaw') + '/workspace-infra/skills';
+const DEFAULT_SYSTEM_PATHS = [
+  '/opt/homebrew/lib/node_modules/openclaw/skills',
+  '/usr/local/lib/node_modules/openclaw/skills',
+  '/usr/lib/node_modules/openclaw/skills',
+];
+const DEFAULT_WORKSPACE_PATH = (process.env.OPENCLAW_DIR || '/root/.openclaw') + '/workspace/skills';
 
 /**
  * Parse SKILL.md front matter (YAML between --- delimiters)
@@ -220,33 +224,53 @@ function buildAgentSkillMap(): Map<string, string[]> {
 /**
  * Load configured skills from config file
  */
-function loadConfiguredSkills(): ConfiguredSkill[] {
+function detectSystemSkillsPath(config?: SkillsConfig): string {
+  if (config?.systemSkillsPath && fs.existsSync(config.systemSkillsPath)) return config.systemSkillsPath;
+  for (const p of DEFAULT_SYSTEM_PATHS) {
+    if (fs.existsSync(p)) return p;
+  }
+  return DEFAULT_SYSTEM_PATHS[0];
+}
+
+function discoverSkillsFromDir(dir: string, source: 'workspace' | 'system'): ConfiguredSkill[] {
   try {
-    const content = fs.readFileSync(CONFIG_PATH, 'utf-8');
-    const config: SkillsConfig = JSON.parse(content);
-    return config.skills || [];
+    if (!fs.existsSync(dir)) return [];
+    return fs.readdirSync(dir, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && fs.existsSync(path.join(dir, d.name, 'SKILL.md')))
+      .map((d) => ({ name: d.name, location: source }));
   } catch {
     return [];
   }
 }
 
 /**
- * Scan only configured skills and return parsed skills
+ * Scan configured skills; if empty, auto-discover skills from system/workspace dirs
  */
 export function scanAllSkills(): SkillInfo[] {
   const skills: SkillInfo[] = [];
   
   try {
-    const content = fs.readFileSync(CONFIG_PATH, 'utf-8');
-    const config: SkillsConfig = JSON.parse(content);
-    
-    const systemPath = config.systemSkillsPath || DEFAULT_SYSTEM_PATH;
+    let config: SkillsConfig = { skills: [] };
+    try {
+      const content = fs.readFileSync(CONFIG_PATH, 'utf-8');
+      config = JSON.parse(content);
+    } catch {}
+
+    const systemPath = detectSystemSkillsPath(config);
     const workspacePath = config.workspaceSkillsPath || DEFAULT_WORKSPACE_PATH;
 
     // Build agent->skills map for workspace skills
     const agentSkillMap = buildAgentSkillMap();
+
+    let configured = config.skills || [];
+    if (!configured.length) {
+      configured = [
+        ...discoverSkillsFromDir(workspacePath, 'workspace'),
+        ...discoverSkillsFromDir(systemPath, 'system'),
+      ];
+    }
     
-    for (const { name, location } of config.skills) {
+    for (const { name, location } of configured) {
       let skillPath: string;
       
       // Resolve path based on location type

@@ -74,10 +74,10 @@ export default function DashboardPage() {
             letterSpacing: '-1.5px'
           }}
         >
-          🦞 Mission Control
+          🤖✨ Mara
         </h1>
         <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-          Overview of Tenacitas agent activity
+          Resumen en tiempo real de la actividad de Mara y OpenClaw
         </p>
       </div>
 

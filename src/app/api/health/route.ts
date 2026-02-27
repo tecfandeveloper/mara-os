@@ -53,8 +53,9 @@ async function checkPm2Service(name: string): Promise<ServiceCheck> {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const checks: ServiceCheck[] = [];
+  const localBaseUrl = process.env.MARA_OS_URL || new URL(request.url).origin;
 
   // Internal services
   const [missionControl, gateway] = await Promise.all([
@@ -71,15 +72,15 @@ export async function GET() {
 
   // External URLs
   const urlChecks = await Promise.all([
-    checkUrl('https://tenacitas.cazaustre.dev'),
+    checkUrl(localBaseUrl),
     checkUrl('https://api.anthropic.com', 3000),
   ]);
 
   checks.push({
-    name: 'tenacitas.cazaustre.dev',
+    name: 'Mara OS',
     status: urlChecks[0].status,
     latency: urlChecks[0].latency,
-    url: 'https://tenacitas.cazaustre.dev',
+    url: localBaseUrl,
   });
 
   checks.push({

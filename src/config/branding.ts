@@ -17,15 +17,15 @@ export const BRANDING = {
   agentDescription: process.env.NEXT_PUBLIC_AGENT_DESCRIPTION || "", // one-line description
 
   // User/owner information (optional - used in workflow descriptions)
-  ownerUsername: process.env.NEXT_PUBLIC_OWNER_USERNAME || "your-username",
-  ownerEmail: process.env.NEXT_PUBLIC_OWNER_EMAIL || "owner@example.com",
-  ownerCollabEmail: process.env.NEXT_PUBLIC_OWNER_COLLAB_EMAIL || "collabs@example.com",
+  ownerUsername: process.env.NEXT_PUBLIC_OWNER_USERNAME || "",
+  ownerEmail: process.env.NEXT_PUBLIC_OWNER_EMAIL || "",
+  ownerCollabEmail: process.env.NEXT_PUBLIC_OWNER_COLLAB_EMAIL || "",
 
   // Social media handles (optional - for workflow descriptions)
-  twitterHandle: process.env.NEXT_PUBLIC_TWITTER_HANDLE || "@username",
+  twitterHandle: process.env.NEXT_PUBLIC_TWITTER_HANDLE || "",
 
   // Company/organization name (shown in office 3D view)
-  companyName: process.env.NEXT_PUBLIC_COMPANY_NAME || "MISSION CONTROL, INC.",
+  companyName: process.env.NEXT_PUBLIC_COMPANY_NAME || "Mission Control",
 
   // App title (shown in browser tab)
   appTitle: process.env.NEXT_PUBLIC_APP_TITLE || "Mission Control",

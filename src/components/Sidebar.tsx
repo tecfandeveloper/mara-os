@@ -208,7 +208,7 @@ export function Sidebar() {
               letterSpacing: "-0.5px",
             }}
           >
-            Mission Control
+            Mara
           </h1>
         </div>
 

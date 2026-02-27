@@ -64,6 +64,23 @@ export const MODEL_PRICING: ModelPricing[] = [
     outputPricePerMillion: 10.00,
     contextWindow: 128000,
   },
+  // OpenAI Codex/GPT
+  {
+    id: "openai-codex/gpt-5.3-codex",
+    name: "GPT-5.3 Codex",
+    alias: "gpt-5.3-codex",
+    inputPricePerMillion: 3.0,
+    outputPricePerMillion: 15.0,
+    contextWindow: 272000,
+  },
+  {
+    id: "openai/gpt-5-mini",
+    name: "GPT-5 Mini",
+    alias: "gpt-mini",
+    inputPricePerMillion: 0.25,
+    outputPricePerMillion: 2.0,
+    contextWindow: 128000,
+  },
   // MiniMax
   {
     id: "minimax/minimax-m2.5",
@@ -129,6 +146,10 @@ export function normalizeModelId(modelId: string): string {
     "claude-haiku-3-5": "anthropic/claude-haiku-3-5",
     "gemini-2.5-flash": "google/gemini-2.5-flash",
     "gemini-2.5-pro": "google/gemini-2.5-pro",
+    // OpenAI/Codex
+    "gpt-5.3-codex": "openai-codex/gpt-5.3-codex",
+    "openai/gpt-5-mini": "openai/gpt-5-mini",
+    "gpt-mini": "openai/gpt-5-mini",
     // MiniMax
     minimax: "minimax/minimax-m2.5",
     "minimax-m2.5": "minimax/minimax-m2.5",

@@ -5,14 +5,6 @@ import os from "os";
 
 const execAsync = promisify(exec);
 
-// Services monitored per backend
-const SYSTEMD_SERVICES = ["mission-control"];
-const PM2_SERVICES = ["classvault", "content-vault", "postiz-simple", "brain"];
-// creatoros not deployed yet — shown as "not_deployed"
-const PLACEHOLDER_SERVICES = [
-  { name: "creatoros", description: "Creatoros Platform", status: "not_deployed" },
-];
-
 interface ServiceEntry {
   name: string;
   status: string;
@@ -25,307 +17,144 @@ interface ServiceEntry {
   cpu?: number | null;
 }
 
-interface TailscaleDevice {
-  hostname: string;
-  ip: string;
-  os: string;
-  online: boolean;
+function parseDf(stdout: string): { total: number; used: number; free: number; percent: number } {
+  const lines = stdout.trim().split("\n").filter(Boolean);
+  const row = lines[lines.length - 1] || "";
+  const parts = row.trim().split(/\s+/);
+  const totalKb = Number(parts[1]);
+  const usedKb = Number(parts[2]);
+  const freeKb = Number(parts[3]);
+  const percent = totalKb > 0 ? (usedKb / totalKb) * 100 : 0;
+  return {
+    total: Number((totalKb / 1024 / 1024).toFixed(2)),
+    used: Number((usedKb / 1024 / 1024).toFixed(2)),
+    free: Number((freeKb / 1024 / 1024).toFixed(2)),
+    percent: Number(percent.toFixed(2)),
+  };
 }
-
-interface FirewallRule {
-  port: string;
-  action: string;
-  from: string;
-  comment: string;
-}
-
-// Normalize PM2 status to a common set
-function normalizePm2Status(status: string): string {
-  switch (status) {
-    case "online":
-      return "active";
-    case "stopped":
-    case "stopping":
-      return "inactive";
-    case "errored":
-    case "error":
-      return "failed";
-    case "launching":
-    case "waiting restart":
-      return "activating";
-    default:
-      return status;
-  }
-}
-
-// Friendly display names for PM2 process names
-const SERVICE_DESCRIPTIONS: Record<string, string> = {
-  "mission-control": "Mission Control – Tenacitas Dashboard",
-  classvault: "ClassVault – LMS Platform",
-  "content-vault": "Content Vault – Draft Management Webapp",
-  "postiz-simple": "Postiz – Social Media Scheduler",
-  brain: "Brain – Internal Tools",
-  creatoros: "Creatoros Platform",
-};
 
 export async function GET() {
   try {
-    // ── CPU ──────────────────────────────────────────────────────────────────
-    const cpuCount = os.cpus().length;
+    const cpuCount = os.cpus().length || 1;
     const loadAvg = os.loadavg();
     const cpuUsage = Math.min(Math.round((loadAvg[0] / cpuCount) * 100), 100);
 
-    // ── RAM ──────────────────────────────────────────────────────────────────
+    const cpus = os.cpus();
+    const coreAvg = Math.min(100, Math.round((cpuUsage / Math.max(1, cpus.length)) * 1.5));
+
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
     const usedMem = totalMem - freeMem;
 
-    // ── Disk ─────────────────────────────────────────────────────────────────
-    let diskTotal = 100;
-    let diskUsed = 0;
-    let diskFree = 100;
+    let disk = { total: 0, used: 0, free: 0, percent: 0 };
     try {
-      const { stdout } = await execAsync("df -BG / | tail -1");
-      const parts = stdout.trim().split(/\s+/);
-      diskTotal = parseInt(parts[1].replace("G", ""));
-      diskUsed = parseInt(parts[2].replace("G", ""));
-      diskFree = parseInt(parts[3].replace("G", ""));
-    } catch (error) {
-      console.error("Failed to get disk stats:", error);
-    }
-    const diskPercent = (diskUsed / diskTotal) * 100;
+      const { stdout } = await execAsync("df -k /");
+      disk = parseDf(stdout);
+    } catch {}
 
-    // ── Network (real stats from /proc/net/dev) ───────────────────────────────
     let network = { rx: 0, tx: 0 };
     try {
-      const { readFileSync } = await import('fs');
-      
-      function readNetStats(): { rx: number; tx: number; ts: number } {
-        const netDev = readFileSync('/proc/net/dev', 'utf-8');
-        const lines = netDev.trim().split('\n').slice(2);
-        let rx = 0, tx = 0;
-        for (const line of lines) {
-          const parts = line.trim().split(/\s+/);
-          const iface = parts[0].replace(':', '');
-          if (iface === 'lo') continue;
-          rx += parseInt(parts[1]) || 0;
-          tx += parseInt(parts[9]) || 0;
+      if (process.platform === "darwin") {
+        const { stdout } = await execAsync("netstat -ib");
+        const lines = stdout.split("\n").filter((l) => l.includes("en0"));
+        let rx = 0;
+        let tx = 0;
+        for (const l of lines) {
+          const p = l.trim().split(/\s+/);
+          rx += Number(p[6]) || 0;
+          tx += Number(p[9]) || 0;
         }
-        return { rx, tx, ts: Date.now() };
+        network = { rx: Number((rx / 1024 / 1024).toFixed(2)), tx: Number((tx / 1024 / 1024).toFixed(2)) };
       }
-      
-      const current = readNetStats();
-      
-      // Use module-level cache for previous reading
-      if ((global as Record<string, unknown>).__netPrev) {
-        const prev = (global as Record<string, unknown>).__netPrev as { rx: number; tx: number; ts: number };
-        const dtSec = (current.ts - prev.ts) / 1000;
-        if (dtSec > 0) {
-          network = {
-            rx: parseFloat(Math.max(0, (current.rx - prev.rx) / 1024 / 1024 / dtSec).toFixed(3)),
-            tx: parseFloat(Math.max(0, (current.tx - prev.tx) / 1024 / 1024 / dtSec).toFixed(3)),
-          };
-        }
-      }
-      (global as Record<string, unknown>).__netPrev = current;
-    } catch (error) {
-      console.error("Failed to get network stats:", error);
-    }
+    } catch {}
 
-    // ── Services ─────────────────────────────────────────────────────────────
     const services: ServiceEntry[] = [];
 
-    // 1. Systemd services
-    for (const name of SYSTEMD_SERVICES) {
-      try {
-        const { stdout } = await execAsync(`systemctl is-active ${name} 2>/dev/null || true`);
-        const rawStatus = stdout.trim(); // "active" | "inactive" | "failed" | ...
-        services.push({
-          name,
-          status: rawStatus,
-          description: SERVICE_DESCRIPTIONS[name] ?? name,
-          backend: "systemd",
-        });
-      } catch {
-        services.push({
-          name,
-          status: "unknown",
-          description: SERVICE_DESCRIPTIONS[name] ?? name,
-          backend: "systemd",
-        });
-      }
-    }
-
-    // 2. PM2 services — single call, parse JSON
+    // PM2 dynamic discovery
     try {
-      const { stdout: pm2Json } = await execAsync("pm2 jlist 2>/dev/null");
-      const pm2List = JSON.parse(pm2Json) as Array<{
-        name: string;
-        pid: number | null;
-        pm2_env: {
-          status: string;
-          pm_uptime?: number;
-          restart_time?: number;
-          monit?: { cpu: number; memory: number };
-        };
-      }>;
-
-      const pm2Map: Record<string, (typeof pm2List)[0]> = {};
+      const { stdout } = await execAsync("pm2 jlist 2>/dev/null");
+      const pm2List = JSON.parse(stdout) as Array<any>;
       for (const proc of pm2List) {
-        pm2Map[proc.name] = proc;
-      }
-
-      for (const name of PM2_SERVICES) {
-        const proc = pm2Map[name];
-        if (!proc) {
-          services.push({
-            name,
-            status: "unknown",
-            description: SERVICE_DESCRIPTIONS[name] ?? name,
-            backend: "pm2",
-          });
-          continue;
-        }
-
-        const rawStatus = proc.pm2_env?.status ?? "unknown";
-        const uptime =
-          rawStatus === "online" && proc.pm2_env?.pm_uptime
-            ? Date.now() - proc.pm2_env.pm_uptime
-            : null;
-
         services.push({
-          name,
-          status: normalizePm2Status(rawStatus),
-          description: SERVICE_DESCRIPTIONS[name] ?? name,
+          name: proc.name,
+          status: proc.pm2_env?.status === "online" ? "active" : proc.pm2_env?.status || "unknown",
+          description: proc.name,
           backend: "pm2",
-          uptime,
+          uptime: proc.pm2_env?.pm_uptime ? Date.now() - proc.pm2_env.pm_uptime : null,
           restarts: proc.pm2_env?.restart_time ?? 0,
-          pid: proc.pid,
+          pid: proc.pid ?? null,
           cpu: proc.pm2_env?.monit?.cpu ?? null,
           mem: proc.pm2_env?.monit?.memory ?? null,
         });
       }
-    } catch (err) {
-      console.error("Failed to query PM2:", err);
-      // Fallback: mark all PM2 services as unknown
-      for (const name of PM2_SERVICES) {
-        services.push({
-          name,
-          status: "unknown",
-          description: SERVICE_DESCRIPTIONS[name] ?? name,
-          backend: "pm2",
-        });
-      }
+    } catch {}
+
+    // systemd only on linux
+    if (process.platform === "linux") {
+      try {
+        const { stdout } = await execAsync("systemctl list-units --type=service --state=running --no-legend --no-pager | head -n 20");
+        for (const line of stdout.split("\n").filter(Boolean)) {
+          const unit = line.trim().split(/\s+/)[0];
+          if (!unit) continue;
+          services.push({
+            name: unit.replace(/\.service$/, ""),
+            status: "active",
+            description: unit,
+            backend: "systemd",
+          });
+        }
+      } catch {}
     }
 
-    // 3. Placeholder services (not yet deployed)
-    for (const svc of PLACEHOLDER_SERVICES) {
-      services.push({ ...svc, backend: "none" });
-    }
-
-    // ── Tailscale VPN ─────────────────────────────────────────────────────────
-    let tailscaleActive = false;
-    let tailscaleIp = "100.122.105.85";
-    const tailscaleDevices: TailscaleDevice[] = [];
+    // openclaw gateway quick check
+    let gatewayActive = false;
     try {
-      const { stdout: tsStatus } = await execAsync("tailscale status 2>/dev/null || true");
-      const lines = tsStatus.trim().split("\n").filter(Boolean);
-      if (lines.length > 0) {
-        tailscaleActive = true;
-        for (const line of lines) {
-          if (line.startsWith("#")) continue;
-          const parts = line.trim().split(/\s+/);
-          if (parts.length >= 3) {
-            tailscaleDevices.push({
-              ip: parts[0],
-              hostname: parts[1],
-              os: parts[3] || "",
-              online: line.includes("active"),
-            });
-          }
-        }
-        if (tailscaleDevices.length > 0) {
-          tailscaleIp = tailscaleDevices[0].ip || tailscaleIp;
-        }
-      }
-    } catch (error) {
-      console.error("Failed to get Tailscale status:", error);
-    }
+      const { stdout } = await execAsync("openclaw gateway status 2>/dev/null || true");
+      gatewayActive = /running|active|online/i.test(stdout);
+    } catch {}
 
-    // ── Firewall (UFW) ────────────────────────────────────────────────────────
-    let firewallActive = false;
-    const firewallRulesList: FirewallRule[] = [];
-    const staticFirewallRules: FirewallRule[] = [
-      { port: "80/tcp", action: "ALLOW", from: "Anywhere", comment: "Public HTTP" },
-      { port: "443/tcp", action: "ALLOW", from: "Anywhere", comment: "Public HTTPS" },
-      { port: "3000", action: "ALLOW", from: "Tailscale (100.64.0.0/10)", comment: "Mission Control via Tailscale" },
-      { port: "22", action: "ALLOW", from: "Tailscale (100.64.0.0/10)", comment: "SSH via Tailscale only" },
-    ];
+    const tailscale = { active: false, ip: "", devices: [] as any[] };
     try {
-      const { stdout: ufwStatus } = await execAsync("ufw status numbered 2>/dev/null || true");
-      if (ufwStatus.includes("Status: active")) {
-        firewallActive = true;
-        const lines = ufwStatus.split("\n");
-        for (const line of lines) {
-          const match = line.match(/\[\s*\d+\]\s+([\w/:]+)\s+(\w+)\s+(\S+)\s*(#?.*)$/);
-          if (match) {
-            firewallRulesList.push({
-              port: match[1].trim(),
-              action: match[2].trim(),
-              from: match[3].trim(),
-              comment: match[4].replace("#", "").trim(),
-            });
-          }
-        }
+      const { stdout } = await execAsync("tailscale ip -4 2>/dev/null || true");
+      const ip = stdout.trim();
+      if (ip) {
+        tailscale.active = true;
+        tailscale.ip = ip;
       }
-    } catch (error) {
-      console.error("Failed to get firewall status:", error);
+    } catch {}
+
+    const firewall = { active: false, rules: [] as any[], ruleCount: 0 };
+
+    if (!services.find((s) => s.name.includes("openclaw"))) {
+      services.unshift({
+        name: "openclaw-gateway",
+        status: gatewayActive ? "active" : "inactive",
+        description: "OpenClaw Gateway",
+        backend: "openclaw",
+      });
     }
 
     return NextResponse.json({
       cpu: {
         usage: cpuUsage,
-        cores: os.cpus().map(() => Math.round(Math.random() * 100)),
+        cores: cpus.map(() => coreAvg),
         loadAvg,
       },
       ram: {
-        total: parseFloat((totalMem / 1024 / 1024 / 1024).toFixed(2)),
-        used: parseFloat((usedMem / 1024 / 1024 / 1024).toFixed(2)),
-        free: parseFloat((freeMem / 1024 / 1024 / 1024).toFixed(2)),
+        total: Number((totalMem / 1024 / 1024 / 1024).toFixed(2)),
+        used: Number((usedMem / 1024 / 1024 / 1024).toFixed(2)),
+        free: Number((freeMem / 1024 / 1024 / 1024).toFixed(2)),
         cached: 0,
       },
-      disk: {
-        total: diskTotal,
-        used: diskUsed,
-        free: diskFree,
-        percent: diskPercent,
-      },
+      disk,
       network,
-      systemd: services, // kept field name for backwards compat with page.tsx
-      tailscale: {
-        active: tailscaleActive,
-        ip: tailscaleIp,
-        devices:
-          tailscaleDevices.length > 0
-            ? tailscaleDevices
-            : [
-                { ip: "100.122.105.85", hostname: "srv1328267", os: "linux", online: true },
-                { ip: "100.106.86.52", hostname: "iphone182", os: "iOS", online: true },
-                { ip: "100.72.14.113", hostname: "macbook-pro-de-carlos", os: "macOS", online: true },
-              ],
-      },
-      firewall: {
-        active: firewallActive || true,
-        rules: firewallRulesList.length > 0 ? firewallRulesList : staticFirewallRules,
-        ruleCount: staticFirewallRules.length,
-      },
+      systemd: services,
+      tailscale,
+      firewall,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error("Error fetching system monitor data:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch system monitor data" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch system monitor data" }, { status: 500 });
   }
 }

@@ -57,7 +57,7 @@ export function TopBar() {
               letterSpacing: "-0.5px",
             }}
           >
-            TenacitOS
+            Mara OS
           </h1>
           {/* Version Badge */}
           <div
@@ -151,7 +151,7 @@ export function TopBar() {
                 color: "var(--text-secondary)",
               }}
             >
-              Carlos
+              Quique
             </span>
           </div>
         </div>
