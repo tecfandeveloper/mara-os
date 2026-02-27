@@ -15,9 +15,9 @@
 - [x] Historial de ejecuciones pasadas — `GET /api/cron/runs?id=<id>`, botón History en CronJobCard
 
 ### 1.3 Stats Dashboard
-- [ ] Contador de actividades por día/semana
-- [ ] Tipos de acciones más frecuentes
-- [ ] Tasa de éxito/error
+- [x] Contador de actividades por día/semana — Dashboard: Total, Today, This Week; API: `thisWeek` en `GET /api/activities/stats`; Analytics: por día (7 días)
+- [x] Tipos de acciones más frecuentes — Dashboard: bloque «Tipos de acciones más frecuentes» (top 5); Analytics: gráfica por tipo
+- [x] Tasa de éxito/error — Dashboard: Successful/Errors + bloque «Tasa de éxito / error» (%; éxito/error); Analytics: Success Rate gauge
 
 ---
 

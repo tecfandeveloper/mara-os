@@ -20,12 +20,15 @@ import {
   Zap,
   Server,
   Terminal,
+  BarChart3,
+  Percent,
 } from "lucide-react";
 import Link from "next/link";
 
 interface Stats {
   total: number;
   today: number;
+  thisWeek: number;
   success: number;
   error: number;
   byType: Record<string, number>;
@@ -43,7 +46,7 @@ interface Agent {
 }
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<Stats>({ total: 0, today: 0, success: 0, error: 0, byType: {} });
+  const [stats, setStats] = useState<Stats>({ total: 0, today: 0, thisWeek: 0, success: 0, error: 0, byType: {} });
   const [agents, setAgents] = useState<Agent[]>([]);
 
   useEffect(() => {
@@ -54,6 +57,7 @@ export default function DashboardPage() {
       setStats({
         total: actStats.total || 0,
         today: actStats.today || 0,
+        thisWeek: actStats.thisWeek ?? actStats.today ?? 0,
         success: actStats.byStatus?.success || 0,
         error: actStats.byStatus?.error || 0,
         byType: actStats.byType || {},
@@ -84,7 +88,7 @@ export default function DashboardPage() {
       {/* Stats Grid + Weather */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4 md:mb-6">
         {/* Stats */}
-        <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="lg:col-span-3 grid grid-cols-2 md:grid-cols-5 gap-3">
           <StatsCard
             title="Total Activities"
             value={stats.total.toLocaleString()}
@@ -96,6 +100,12 @@ export default function DashboardPage() {
             value={stats.today.toLocaleString()}
             icon={<Zap className="w-5 h-5" />}
             iconColor="var(--accent)"
+          />
+          <StatsCard
+            title="This Week"
+            value={stats.thisWeek.toLocaleString()}
+            icon={<Calendar className="w-5 h-5" />}
+            iconColor="var(--info)"
           />
           <StatsCard
             title="Successful"
@@ -114,6 +124,61 @@ export default function DashboardPage() {
         {/* Weather Widget */}
         <div className="lg:col-span-1">
           <WeatherWidget />
+        </div>
+      </div>
+
+      {/* Stats Dashboard: top types + success/error rate */}
+      <div
+        className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 md:mb-6 rounded-xl p-4"
+        style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}
+      >
+        <div>
+          <h3 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+            <BarChart3 className="w-4 h-4" style={{ color: "var(--accent)" }} />
+            Tipos de acciones más frecuentes
+          </h3>
+          <ul className="space-y-1">
+            {Object.entries(stats.byType)
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 5)
+              .map(([type, count]) => (
+                <li key={type} className="flex justify-between text-sm">
+                  <span style={{ color: "var(--text-secondary)" }} className="capitalize">{type.replace(/_/g, " ")}</span>
+                  <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{count.toLocaleString()}</span>
+                </li>
+              ))}
+            {Object.keys(stats.byType).length === 0 && (
+              <li className="text-sm" style={{ color: "var(--text-muted)" }}>No activity yet</li>
+            )}
+          </ul>
+          <Link href="/analytics" className="text-xs mt-2 inline-block" style={{ color: "var(--accent)" }}>View analytics →</Link>
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: "var(--text-primary)" }}>
+            <Percent className="w-4 h-4" style={{ color: "var(--accent)" }} />
+            Tasa de éxito / error
+          </h3>
+          {(() => {
+            const totalResolved = stats.success + stats.error;
+            const successRate = totalResolved > 0 ? Math.round((stats.success / totalResolved) * 100) : 0;
+            const errorRate = totalResolved > 0 ? Math.round((stats.error / totalResolved) * 100) : 0;
+            return (
+              <div className="flex flex-col gap-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span style={{ color: "var(--text-secondary)" }}>Éxito</span>
+                  <span style={{ color: "var(--success)", fontWeight: 600 }}>{successRate}%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span style={{ color: "var(--text-secondary)" }}>Error</span>
+                  <span style={{ color: "var(--error)", fontWeight: 600 }}>{errorRate}%</span>
+                </div>
+                {totalResolved === 0 && (
+                  <span style={{ color: "var(--text-muted)" }}>No completed activities yet</span>
+                )}
+              </div>
+            );
+          })()}
+          <Link href="/analytics" className="text-xs mt-2 inline-block" style={{ color: "var(--accent)" }}>View analytics →</Link>
         </div>
       </div>
 

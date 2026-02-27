@@ -255,15 +255,19 @@ export function getActivities(opts: GetActivitiesOptions = {}): ActivitiesResult
 export function getActivityStats(): {
   total: number;
   today: number;
+  thisWeek: number;
   byType: Record<string, number>;
   byStatus: Record<string, number>;
 } {
   const db = getDb();
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(weekStart.getDate() - 7);
 
   const total = (db.prepare('SELECT COUNT(*) as n FROM activities').get() as { n: number }).n;
   const today = (db.prepare("SELECT COUNT(*) as n FROM activities WHERE timestamp >= ?").get(todayStart.toISOString()) as { n: number }).n;
+  const thisWeek = (db.prepare("SELECT COUNT(*) as n FROM activities WHERE timestamp >= ?").get(weekStart.toISOString()) as { n: number }).n;
 
   const typeRows = db.prepare("SELECT type, COUNT(*) as n FROM activities GROUP BY type").all() as Array<{ type: string; n: number }>;
   const byType: Record<string, number> = {};
@@ -273,5 +277,5 @@ export function getActivityStats(): {
   const byStatus: Record<string, number> = {};
   for (const r of statusRows) byStatus[r.status] = r.n;
 
-  return { total, today, byType, byStatus };
+  return { total, today, thisWeek, byType, byStatus };
 }
