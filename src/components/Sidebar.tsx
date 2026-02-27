@@ -29,6 +29,8 @@ import {
   SquareTerminal,
   History,
   MessageSquare,
+  Bot,
+  Network,
 } from "lucide-react";
 import { getAgentDisplayName } from "@/config/branding";
 
@@ -47,6 +49,8 @@ const navItems = [
   { href: "/files", label: "Files", icon: FolderOpen },
   { href: "/cron", label: "Cron Jobs", icon: Timer },
   { href: "/sessions", label: "Sessions", icon: History },
+  { href: "/subagents", label: "Sub-Agents", icon: Bot },
+  { href: "/agent-graph", label: "Agent Graph", icon: Network },
   { href: "/notifications-log", label: "Notifications Log", icon: MessageSquare },
   { href: "/search", label: "Search", icon: Search },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },

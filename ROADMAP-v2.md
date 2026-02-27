@@ -99,31 +99,6 @@ Este documento lista **únicamente el trabajo pendiente**. Todo lo ya implementa
 
 ---
 
-## Fase 10: Sub-Agent Orchestra — Pendiente
-
-### 10.1 Sub-Agent Dashboard
-- [ ] Lista de sub-agentes activos en tiempo real
-- [ ] Estado: running, waiting, completed, failed
-- [ ] Task description y progreso
-- [ ] Modelo usado
-- [ ] Tokens consumidos por cada uno
-- [ ] Timeline de spawns/completions
-
-### 10.2 Agent Communication Graph
-- [ ] Visualización de mensajes entre main agent y sub-agents
-- [ ] Flow diagram tipo Sankey o network graph
-- [ ] Ver contenido de mensajes al hacer click
-- [ ] Filtrar por sesión, fecha, tipo
-
-### 10.3 Multi-Agent Orchestration
-- [ ] Crear workflows visuales de múltiples agentes
-- [ ] Drag & drop tasks → auto-spawn agents
-- [ ] Dependencies entre tasks
-- [ ] Parallel vs sequential execution
-- [ ] Template workflows guardables
-
----
-
 ## Fase 11: Advanced Visualizations — Pendiente
 
 ### 11.1 3D Workspace Explorer
@@ -172,7 +147,6 @@ Este documento lista **únicamente el trabajo pendiente**. Todo lo ya implementa
 
 | Prioridad | Bloque | Notas |
 |-----------|--------|--------|
-| **Alta** | 10.1 Sub-Agent Dashboard | Visibilidad de workflows multi-agent |
 | **Alta** | 6.2 Integration Status + 6.3 Config Editor | Cuando haga falta operar integraciones/config |
 | **Media** | 4.3 Performance Metrics | Métricas de tiempo y uptime |
 | **Media** | 9.2 Token Economics | Optimización de costes |

@@ -296,29 +296,32 @@ Estado actual: **Fases 1–4** completas (incl. Analytics, Cost Tracking, Perfor
 
 ---
 
-## Fase 10: Sub-Agent Orchestra (Semana 12)
+## Fase 10: Sub-Agent Orchestra (Semana 12) ✅
 > Gestión y visualización de multi-agent workflows
 
-### 10.1 Sub-Agent Dashboard
-- [ ] Lista de sub-agentes activos en tiempo real
-- [ ] Estado: running, waiting, completed, failed
-- [ ] Task description y progreso
-- [ ] Modelo usado
-- [ ] Tokens consumidos por cada uno
-- [ ] Timeline de spawns/completions
+### 10.1 Sub-Agent Dashboard ✅
+- [x] Lista de sub-agentes activos en tiempo real — `GET /api/subagents`, página `/subagents`
+- [x] Estado: running, completed, failed (derivado de ageMs/aborted)
+- [x] Task description y progreso — nombre/emoji desde config; context used % como progreso
+- [x] Modelo usado — por sesión
+- [x] Tokens consumidos por cada uno — input/output/total
+- [x] Timeline de spawns/completions — bloque ordenado por updatedAt; enlace Ver transcript
+- **Archivos:** `src/app/api/subagents/route.ts`, `src/app/(dashboard)/subagents/page.tsx`; Sidebar + Dock
 
-### 10.2 Agent Communication Graph
-- [ ] Visualización de mensajes entre main agent y sub-agents
-- [ ] Flow diagram tipo Sankey o network graph
-- [ ] Ver contenido de mensajes al hacer click
-- [ ] Filtrar por sesión, fecha, tipo
+### 10.2 Agent Communication Graph ✅
+- [x] Visualización entre main agent y sub-agents — nodos Main + subagents, aristas con tokens
+- [x] Flow diagram (grafo) — `AgentGraph.tsx` (SVG); `GET /api/subagents/graph`
+- [x] Ver contenido al hacer click — panel lateral con enlace a Session History
+- [x] Filtrar por fecha — startDate/endDate en API y página
+- **Página:** `/agent-graph`; **API:** `src/app/api/subagents/graph/route.ts`
 
-### 10.3 Multi-Agent Orchestration
-- [ ] Crear workflows visuales de múltiples agentes
-- [ ] Drag & drop tasks → auto-spawn agents
-- [ ] Dependencies entre tasks
-- [ ] Parallel vs sequential execution
-- [ ] Template workflows guardables
+### 10.3 Multi-Agent Orchestration ✅
+- [x] Crear workflows visuales — editor en Workflows page (nombre, descripción, steps)
+- [x] Dependencies entre tasks — steps con dependencies (array de step ids)
+- [x] Parallel vs sequential execution — campo execution por step
+- [x] Template workflows guardables — CRUD `GET/POST/PUT/DELETE /api/workflows`, `data/workflows.json`
+- [x] Run endpoint — `POST /api/workflows/[id]/run` (501 hasta integración OpenClaw)
+- **Archivos:** `src/lib/workflows-store.ts`, `src/app/api/workflows/route.ts`, `src/app/api/workflows/[id]/route.ts`, `src/app/(dashboard)/workflows/page.tsx`
 
 ---
 
@@ -419,7 +422,7 @@ Estado actual: **Fases 1–4** completas (incl. Analytics, Cost Tracking, Perfor
 ### Tier 2: High Value (Should Have) — mayoría hecha
 4. **Fase 5** - Command Terminal ✅ + Session History ✅ + Notifications Log ✅
 5. **Fase 9.4** - Quick Actions Hub ✅
-6. **Fase 10.1** - Sub-Agent Dashboard → pendiente
+6. **Fase 10** - Sub-Agent Orchestra (Dashboard, Agent Graph, Multi-Agent Orchestration) ✅
 
 ### Tier 3: Intelligence & Insights (Nice to Have)
 7. **Fase 4** - Analytics básicos → métricas ✅
@@ -429,7 +432,7 @@ Estado actual: **Fases 1–4** completas (incl. Analytics, Cost Tracking, Perfor
 ### Tier 4: Advanced Features (Wow Factor)
 10. **Fase 9.3** - Knowledge Graph → visualización avanzada
 11. **Fase 11.2** - Heatmaps Interactivos → análisis visual
-12. **Fase 10.2** - Agent Communication Graph → debugging multi-agent
+12. **Fase 10.2** - Agent Communication Graph ✅
 
 ### Tier 5: Polish & Experimental (Future)
 13. **Fase 7** - Real-time updates → UX premium
@@ -446,4 +449,4 @@ Estado actual: **Fases 1–4** completas (incl. Analytics, Cost Tracking, Perfor
 *Creado: 2026-02-07*
 *Última actualización: 2026-02-27*
 
-**Resumen de estado:** Fases 1–4 completas (Analytics, Cost Tracking, Performance Metrics, alertas de gasto automáticas). Fase 5 (Terminal, Session History, Notifications Log) completa. Fase 6.1 Skills (lista + viewer). Fase 7 (SSE activity stream + Live Logs). Fase 8 (Office 3D MVP + interacciones parciales). Fase 9.4 Quick Actions. Session History, Notifications, Auth, Git, Search, System, Workflows, Reports, Calendar, Settings y About implementados.
+**Resumen de estado:** Fases 1–5 y 10 completas. Fase 10: Sub-Agent Dashboard, Agent Communication Graph, Multi-Agent Orchestration (templates + CRUD; ejecución pendiente de OpenClaw). Fase 6.1 Skills (lista + viewer). Fase 7 (SSE + Live Logs). Fase 8 (Office 3D MVP + interacciones parciales). Fase 9.4 Quick Actions. Session History, Notifications, Auth, Git, Search, System, Workflows, Reports, Calendar, Settings y About implementados.

@@ -28,6 +28,7 @@ const dockItems = [
   { href: "/activity", label: "Activity", icon: Activity },
   { href: "/cron", label: "Cron Jobs", icon: Clock },
   { href: "/sessions", label: "Sessions", icon: History },
+  { href: "/subagents", label: "Sub-Agents", icon: Bot },
   { href: "/notifications-log", label: "Notifications Log", icon: MessageSquare },
   { href: "/skills", label: "Skills", icon: Puzzle },
   { href: "/costs", label: "Costs & Analytics", icon: DollarSign },
