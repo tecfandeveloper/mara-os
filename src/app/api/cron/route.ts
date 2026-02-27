@@ -88,24 +88,87 @@ function formatSchedule(schedule: Record<string, unknown>): string {
   }
 }
 
-// PUT: Toggle enable/disable a cron job
+// POST: Create a new cron job (openclaw cron add)
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { name, description, schedule, timezone } = body;
+
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return NextResponse.json({ error: "Job name is required" }, { status: 400 });
+    }
+    const cronExpr = typeof schedule === "string" ? schedule.trim() : (schedule as { expr?: string })?.expr;
+    if (!cronExpr) {
+      return NextResponse.json({ error: "Cron schedule is required" }, { status: 400 });
+    }
+
+    const tz = (typeof timezone === "string" && timezone.trim()) ? timezone.trim() : "UTC";
+    const msg = typeof description === "string" ? description.trim() : "";
+    const shellEscape = (s: string) => `'${s.replace(/'/g, "'\"'\"'")}'`;
+    const cmd = [
+      "openclaw cron add",
+      "--name", shellEscape(name.trim()),
+      "--cron", shellEscape(cronExpr),
+      "--tz", shellEscape(tz),
+      "--session main",
+      msg ? `--message ${shellEscape(msg)}` : "",
+    ].filter(Boolean).join(" ") + " 2>/dev/null";
+
+    execSync(cmd, {
+      timeout: 10000,
+      encoding: "utf-8",
+    });
+
+    return NextResponse.json({ success: true, created: true });
+  } catch (error) {
+    console.error("Error creating cron job:", error);
+    return NextResponse.json(
+      { error: "Failed to create cron job" },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT: Toggle enable/disable and optionally edit job (name, schedule, timezone, description)
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, enabled } = body;
+    const { id, enabled, name, schedule, timezone, description } = body;
 
     if (!id) {
       return NextResponse.json({ error: "Job ID is required" }, { status: 400 });
     }
 
-    const action = enabled ? "enable" : "disable";
-    // Use openclaw CLI to update the job
-    const output = execSync(
-      `openclaw cron ${action} ${id} --json 2>/dev/null || openclaw cron update ${id} --enabled=${enabled} --json 2>/dev/null`,
-      { timeout: 10000, encoding: "utf-8" }
-    );
+    const safeId = String(id).replace(/[^a-zA-Z0-9_-]/g, "");
 
-    return NextResponse.json({ success: true, id, enabled });
+    // If editing fields are provided, try cron edit first
+    const cronExpr = typeof schedule === "string" ? schedule?.trim() : (schedule as { expr?: string })?.expr;
+    const shellEscape = (s: string) => `'${s.replace(/'/g, "'\"'\"'")}'`;
+    if (name !== undefined || cronExpr !== undefined || timezone !== undefined || description !== undefined) {
+      try {
+        const editParts = [`openclaw cron edit ${safeId}`];
+        if (typeof name === "string" && name.trim()) editParts.push("--name", shellEscape(name.trim()));
+        if (cronExpr) editParts.push("--cron", shellEscape(cronExpr));
+        if (typeof timezone === "string" && timezone.trim()) editParts.push("--tz", shellEscape(timezone.trim()));
+        if (typeof description === "string") editParts.push("--message", shellEscape(description.trim()));
+        if (editParts.length > 1) {
+          execSync(editParts.join(" ") + " 2>/dev/null", { timeout: 10000, encoding: "utf-8" });
+        }
+      } catch (editErr) {
+        console.warn("Cron edit failed (CLI may not support all fields):", editErr);
+      }
+    }
+
+    // Enable/disable
+    if (typeof enabled === "boolean") {
+      const action = enabled ? "enable" : "disable";
+      execSync(
+        `openclaw cron ${action} ${safeId} --json 2>/dev/null || openclaw cron update ${safeId} --enabled=${enabled} --json 2>/dev/null`,
+        { timeout: 10000, encoding: "utf-8" }
+      );
+    }
+
+    return NextResponse.json({ success: true, id: safeId, enabled });
   } catch (error) {
     console.error("Error updating cron job:", error);
     return NextResponse.json(

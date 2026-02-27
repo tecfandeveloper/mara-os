@@ -89,8 +89,10 @@ export function CronJobModal({ isOpen, onClose, onSave, editingJob }: CronJobMod
       if (editingJob) {
         setName(editingJob.name);
         setDescription(editingJob.description);
-        setSchedule(typeof editingJob.schedule === "string" ? editingJob.schedule : String(editingJob.schedule));
-        setTimezone(editingJob.timezone);
+        const s = editingJob.schedule;
+        const cronStr = typeof s === "string" ? s : (s && typeof s === "object" && "expr" in s ? (s as { expr?: string }).expr : "");
+        setSchedule(cronStr || "0 9 * * *");
+        setTimezone(editingJob.timezone || "UTC");
         setFrequencyMode("custom");
       } else {
         setName("");

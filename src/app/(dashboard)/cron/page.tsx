@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Clock, RefreshCw, AlertCircle, LayoutGrid, CalendarDays, Zap } from "lucide-react";
+import { Clock, RefreshCw, AlertCircle, LayoutGrid, CalendarDays, Zap, Plus } from "lucide-react";
 import { CronJobCard, type CronJob } from "@/components/CronJobCard";
 import { CronWeeklyTimeline } from "@/components/CronWeeklyTimeline";
+import { CronJobModal } from "@/components/CronJobModal";
 
 type ViewMode = "cards" | "timeline";
 
@@ -14,6 +15,8 @@ export default function CronJobsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
   const [runToast, setRunToast] = useState<{ id: string; status: "success" | "error"; name: string } | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingJob, setEditingJob] = useState<CronJob | null>(null);
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -63,6 +66,51 @@ export default function CronJobsPage() {
     } catch (err) {
       console.error("Delete error:", err);
       setError("Failed to delete job");
+    }
+  };
+
+  const handleSaveJob = async (job: Partial<CronJob>) => {
+    try {
+      setError(null);
+      if (editingJob?.id) {
+        const res = await fetch("/api/cron", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: editingJob.id,
+            name: job.name,
+            description: job.description,
+            schedule: job.schedule,
+            timezone: job.timezone,
+            enabled: job.enabled ?? editingJob.enabled,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to update job");
+        }
+      } else {
+        const res = await fetch("/api/cron", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: job.name,
+            description: job.description,
+            schedule: job.schedule,
+            timezone: job.timezone,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to create job");
+        }
+      }
+      setModalOpen(false);
+      setEditingJob(null);
+      setIsLoading(true);
+      await fetchJobs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
     }
   };
 
@@ -157,6 +205,25 @@ export default function CronJobsPage() {
             </button>
           </div>
 
+          <button
+            onClick={() => { setEditingJob(null); setModalOpen(true); }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              backgroundColor: 'var(--accent)',
+              color: '#000',
+              borderRadius: '0.5rem',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            Create job
+          </button>
           <button
             onClick={() => { setIsLoading(true); fetchJobs(); }}
             style={{
@@ -327,7 +394,7 @@ export default function CronJobsPage() {
               <CronJobCard
                 job={job}
                 onToggle={handleToggle}
-                onEdit={() => {}}
+                onEdit={() => { setEditingJob(job); setModalOpen(true); }}
                 onDelete={handleDelete}
                 onRun={handleRun}
               />
@@ -394,6 +461,13 @@ export default function CronJobsPage() {
             : `✗ Failed to trigger "${runToast.name}"`}
         </div>
       )}
+
+      <CronJobModal
+        isOpen={modalOpen}
+        onClose={() => { setModalOpen(false); setEditingJob(null); setError(null); }}
+        onSave={handleSaveJob}
+        editingJob={editingJob}
+      />
 
       <style jsx global>{`
         @keyframes slideInRight {

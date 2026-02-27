@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
             ? new Date(r.completedAt).getTime() - new Date(r.startedAt).getTime()
             : null),
         error: r.error || null,
+        output: r.output ?? (r.log != null ? String(r.log) : null),
       }));
     } catch {
       // Command might not support runs yet or no history — return empty
@@ -60,6 +61,8 @@ interface RawRun {
   status?: string;
   durationMs?: number;
   error?: string;
+  output?: string;
+  log?: string | unknown;
 }
 
 interface RunEntry {
@@ -70,4 +73,5 @@ interface RunEntry {
   status: string;
   durationMs: number | null;
   error: string | null;
+  output?: string | null;
 }

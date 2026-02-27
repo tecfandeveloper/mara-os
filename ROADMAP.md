@@ -48,22 +48,22 @@
 
 ### 3.1 CRUD de Cron Jobs
 - [x] Listar todos los jobs con estado (ya existía)
-- [ ] Crear nuevo job con form visual (CronJobModal existe pero no está wired up al API)
-- [ ] Editar job existente
+- [x] Crear nuevo job con form visual — CronJobModal wired a `POST /api/cron`; botón "Create job" en cron page
+- [x] Editar job existente — botón Edit en CronJobCard; modal + `PUT /api/cron` con name, schedule, timezone, description
 - [x] Eliminar job (con confirmación)
 - [x] Activar/desactivar job
 
 ### 3.2 Cron Builder Visual
-- [ ] Selector de frecuencia: diario, semanal, mensual, custom
-- [ ] Preview de próximas 5 ejecuciones
-- [ ] Selector de timezone
-- [ ] Templates predefinidos
+- [x] Selector de frecuencia: diario, semanal, mensual, custom (en CronJobModal)
+- [x] Preview de próximas 5 ejecuciones (en CronJobModal)
+- [x] Selector de timezone (en CronJobModal)
+- [x] Templates predefinidos (en CronJobModal)
 
 ### 3.3 Historial de Ejecuciones
 - [x] ~~Re-ejecutar manualmente~~ → **"Run Now" button** en CronJobCard (llama a `POST /api/cron/run`)
 - [x] **Run History inline** → botón History en CronJobCard, llama a `GET /api/cron/runs?id=<id>`
-- [ ] Filtrar historial por fecha, estado
-- [ ] Log con output completo
+- [x] Filtrar historial por fecha (7d / 30d / All) y estado (All / Success / Error) en CronJobCard
+- [x] Log con output completo — fila expandible con error + output en panel History; API runs devuelve `output` si existe
 
 ### 3.4 Weekly Timeline View ✅ (nuevo — 2026-02-19)
 - [x] Vista tipo calendario de 7 días
@@ -73,6 +73,12 @@
 - [x] Toggle Cards / Timeline en header
 - [x] Componente: `CronWeeklyTimeline.tsx`
 - [x] Nuevas rutas API: `POST /api/cron/run`, `GET /api/cron/runs`
+
+**Phase 3 completion (2026-02-27):**
+- **API:** `POST /api/cron` (create job via `openclaw cron add`), `PUT /api/cron` extendido (edit name/schedule/tz/description con `openclaw cron edit` + enable/disable)
+- **Cron page:** Modal create/edit con `CronJobModal`, botón "Create job", `onEdit` abre modal con job; `handleSaveJob` llama POST o PUT y refresca lista
+- **CronJobCard:** Botón Edit; History con filtros por fecha (7d/30d/All) y estado (All/Success/Error); filas expandibles con log completo (error + output)
+- **Archivos:** MODIFIED: `src/app/api/cron/route.ts`, `src/app/api/cron/runs/route.ts`, `src/app/(dashboard)/cron/page.tsx`, `src/components/CronJobModal.tsx`, `src/components/CronJobCard.tsx`
 
 ---
 
@@ -417,4 +423,4 @@
 ---
 
 *Creado: 2026-02-07*
-*Última actualización: 2026-02-21 (Tenacitas nightly shift)*
+*Última actualización: 2026-02-27 (Fase 3 Cron Manager completada)*

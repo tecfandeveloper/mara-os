@@ -7,6 +7,7 @@ import {
   Play,
   Pause,
   Trash2,
+  Pencil,
   ChevronDown,
   ChevronUp,
   Bot,
@@ -40,6 +41,7 @@ interface RunHistoryEntry {
   status: string;
   durationMs: number | null;
   error: string | null;
+  output?: string | null;
 }
 
 interface CronJobCardProps {
@@ -60,7 +62,7 @@ const AGENT_EMOJI: Record<string, string> = {
   freelance: "🔧",
 };
 
-export function CronJobCard({ job, onToggle, onDelete, onRun }: CronJobCardProps) {
+export function CronJobCard({ job, onToggle, onEdit, onDelete, onRun }: CronJobCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -68,6 +70,9 @@ export function CronJobCard({ job, onToggle, onDelete, onRun }: CronJobCardProps
   const [showHistory, setShowHistory] = useState(false);
   const [runHistory, setRunHistory] = useState<RunHistoryEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historyStatusFilter, setHistoryStatusFilter] = useState<"all" | "success" | "error">("all");
+  const [historyDateFilter, setHistoryDateFilter] = useState<"7d" | "30d" | "all">("7d");
+  const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
 
   const handleToggle = async () => {
     setIsToggling(true);
@@ -163,6 +168,21 @@ export function CronJobCard({ job, onToggle, onDelete, onRun }: CronJobCardProps
     if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
     return `${(ms / 60000).toFixed(1)}m`;
   };
+
+  const filteredRunHistory = runHistory.filter((run) => {
+    if (historyStatusFilter !== "all") {
+      const status = (run.status || "").toLowerCase();
+      if (historyStatusFilter === "success" && status !== "success" && status !== "completed") return false;
+      if (historyStatusFilter === "error" && status !== "error" && status !== "failed") return false;
+    }
+    if (historyDateFilter !== "all" && run.startedAt) {
+      const runTime = new Date(run.startedAt).getTime();
+      const now = Date.now();
+      const cutoff = historyDateFilter === "7d" ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000;
+      if (now - runTime > cutoff) return false;
+    }
+    return true;
+  });
 
   return (
     <div
@@ -324,6 +344,21 @@ export function CronJobCard({ job, onToggle, onDelete, onRun }: CronJobCardProps
             <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
             <span className="hidden sm:inline">Delete</span>
           </button>
+          <button
+            onClick={() => onEdit(job)}
+            className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm rounded-lg"
+            style={{
+              color: 'var(--text-secondary)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            title="Edit job"
+          >
+            <Pencil className="w-3.5 h-3.5 md:w-4 md:h-4" />
+            <span className="hidden sm:inline">Edit</span>
+          </button>
 
           {/* History button */}
           <button
@@ -413,53 +448,156 @@ export function CronJobCard({ job, onToggle, onDelete, onRun }: CronJobCardProps
               {loadingHistory && <Loader2 className="w-3 h-3 animate-spin ml-auto" />}
             </div>
 
+            {!loadingHistory && runHistory.length > 0 && (
+              <div
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  borderBottom: '1px solid var(--border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  flexWrap: 'wrap',
+                  fontSize: '0.7rem',
+                }}
+              >
+                <span style={{ color: 'var(--text-muted)' }}>Status:</span>
+                <select
+                  value={historyStatusFilter}
+                  onChange={(e) => setHistoryStatusFilter(e.target.value as "all" | "success" | "error")}
+                  style={{
+                    padding: '0.2rem 0.4rem',
+                    backgroundColor: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '0.35rem',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.7rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="all">All</option>
+                  <option value="success">Success</option>
+                  <option value="error">Error</option>
+                </select>
+                <span style={{ color: 'var(--text-muted)', marginLeft: '0.25rem' }}>Date:</span>
+                <select
+                  value={historyDateFilter}
+                  onChange={(e) => setHistoryDateFilter(e.target.value as "7d" | "30d" | "all")}
+                  style={{
+                    padding: '0.2rem 0.4rem',
+                    backgroundColor: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '0.35rem',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.7rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="7d">Last 7 days</option>
+                  <option value="30d">Last 30 days</option>
+                  <option value="all">All</option>
+                </select>
+              </div>
+            )}
+
             {!loadingHistory && runHistory.length === 0 && (
               <div style={{ padding: '0.75rem', fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center' }}>
                 No run history available
               </div>
             )}
 
-            {runHistory.slice(0, 5).map((run, idx) => (
-              <div
-                key={run.id || idx}
-                style={{
-                  padding: '0.5rem 0.75rem',
-                  borderBottom: idx < Math.min(runHistory.length, 5) - 1 ? '1px solid var(--border)' : 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  fontSize: '0.75rem',
-                }}
-              >
-                {run.status === "success" ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--success)' }} />
-                ) : run.status === "error" ? (
-                  <XCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--error)' }} />
-                ) : (
-                  <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--warning)' }} />
-                )}
-                <span style={{ color: 'var(--text-secondary)', flex: 1 }}>
-                  {formatHistoryDate(run.startedAt)}
-                </span>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  {formatDuration(run.durationMs)}
-                </span>
-                {run.error && (
-                  <span
+            {!loadingHistory && filteredRunHistory.slice(0, 10).map((run, idx) => {
+              const runId = run.id || `run-${idx}`;
+              const isExpanded = expandedRunId === runId;
+              const hasLog = run.error || run.output;
+              return (
+                <div
+                  key={runId}
+                  style={{
+                    borderBottom: idx < Math.min(filteredRunHistory.length, 10) - 1 ? '1px solid var(--border)' : 'none',
+                  }}
+                >
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => hasLog && setExpandedRunId(isExpanded ? null : runId)}
+                    onKeyDown={(e) => hasLog && (e.key === "Enter" || e.key === " ") && setExpandedRunId(isExpanded ? null : runId)}
                     style={{
-                      color: 'var(--error)',
-                      maxWidth: '100px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      padding: '0.5rem 0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontSize: '0.75rem',
+                      cursor: hasLog ? 'pointer' : 'default',
                     }}
-                    title={run.error}
                   >
-                    {run.error}
-                  </span>
-                )}
-              </div>
-            ))}
+                    {hasLog ? (
+                      isExpanded ? (
+                        <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--text-muted)' }} />
+                      ) : (
+                        <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--text-muted)', transform: 'rotate(-90deg)' }} />
+                      )
+                    ) : (
+                      <span className="w-3.5 flex-shrink-0" />
+                    )}
+                    {(run.status === "success" || (run.status || "").toLowerCase() === "completed") ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--success)' }} />
+                    ) : (run.status === "error" || (run.status || "").toLowerCase() === "failed") ? (
+                      <XCircle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--error)' }} />
+                    ) : (
+                      <Clock className="w-3.5 h-3.5 flex-shrink-0" style={{ color: 'var(--warning)' }} />
+                    )}
+                    <span style={{ color: 'var(--text-secondary)', flex: 1 }}>
+                      {formatHistoryDate(run.startedAt)}
+                    </span>
+                    <span style={{ color: 'var(--text-muted)' }}>
+                      {formatDuration(run.durationMs)}
+                    </span>
+                    {run.error && !isExpanded && (
+                      <span
+                        style={{
+                          color: 'var(--error)',
+                          maxWidth: '80px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}
+                        title={run.error}
+                      >
+                        {run.error}
+                      </span>
+                    )}
+                  </div>
+                  {isExpanded && hasLog && (
+                    <div
+                      style={{
+                        padding: '0.5rem 0.75rem 0.75rem 2rem',
+                        fontSize: '0.7rem',
+                        fontFamily: 'monospace',
+                        backgroundColor: 'var(--card)',
+                        borderTop: '1px solid var(--border)',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        maxHeight: '12rem',
+                        overflowY: 'auto',
+                      }}
+                    >
+                      {run.error && (
+                        <div style={{ marginBottom: run.output ? '0.5rem' : 0 }}>
+                          <span style={{ color: 'var(--error)', fontWeight: 600 }}>Error:</span>
+                          <div style={{ color: 'var(--error)', marginTop: '0.25rem' }}>{run.error}</div>
+                        </div>
+                      )}
+                      {run.output && (
+                        <div>
+                          <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Output:</span>
+                          <div style={{ color: 'var(--text-secondary)', marginTop: '0.25rem' }}>{run.output}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
