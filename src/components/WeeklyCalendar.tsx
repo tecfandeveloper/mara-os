@@ -9,7 +9,7 @@ import {
   addWeeks,
   subWeeks,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, Loader2 } from "lucide-react";
 
 interface Task {
   id: string;
@@ -19,17 +19,41 @@ interface Task {
   nextRun: string;
 }
 
+interface CronJobFromApi {
+  id: string;
+  name: string;
+  scheduleDisplay?: string;
+  description?: string;
+  nextRun: string | null;
+  enabled?: boolean;
+}
+
 export function WeeklyCalendar() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
 
   useEffect(() => {
-    fetch("/api/tasks")
-      .then((res) => res.json())
-      .then(setTasks)
-      .catch(() => setTasks([]));
+    setIsLoading(true);
+    fetch("/api/cron")
+      .then((res) => res.ok ? res.json() : [])
+      .then((jobs: CronJobFromApi[]) => {
+        const list = Array.isArray(jobs) ? jobs : [];
+        const mapped: Task[] = list
+          .filter((j) => j.enabled !== false && j.nextRun)
+          .map((j) => ({
+            id: j.id,
+            name: j.name,
+            schedule: j.scheduleDisplay ?? "—",
+            description: j.description ?? "",
+            nextRun: j.nextRun as string,
+          }));
+        setTasks(mapped);
+      })
+      .catch(() => setTasks([]))
+      .finally(() => setIsLoading(false));
   }, []);
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
@@ -75,9 +99,13 @@ export function WeeklyCalendar() {
           {format(currentWeekStart, "MMMM yyyy")}
         </h2>
 
-        <div className="flex items-center gap-2 text-sm text-gray-400">
-          <Calendar className="w-4 h-4" />
-          <span>{tasks.length} scheduled tasks</span>
+        <div className="flex items-center gap-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+          {isLoading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Calendar className="w-4 h-4" />
+          )}
+          <span>{tasks.length} scheduled tasks from OpenClaw</span>
         </div>
       </div>
 
@@ -111,7 +139,13 @@ export function WeeklyCalendar() {
 
       {/* Time Grid - Show 6am to 10pm */}
       <div className="max-h-[600px] overflow-y-auto">
-        {hours.filter(h => h >= 6 && h <= 22).map((hour) => (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16" style={{ color: "var(--text-muted)" }}>
+            <Loader2 className="w-8 h-8 animate-spin mr-2" />
+            Loading cron jobs…
+          </div>
+        ) : (
+        hours.filter(h => h >= 6 && h <= 22).map((hour) => (
           <div key={hour} className="grid grid-cols-8 border-b border-gray-800 last:border-b-0">
             <div className="p-2 text-xs text-gray-500 text-right pr-3 border-r border-gray-800">
               {format(new Date().setHours(hour, 0), "HH:mm")}
@@ -143,6 +177,7 @@ export function WeeklyCalendar() {
             })}
           </div>
         ))}
+      )}
       </div>
     </div>
   );

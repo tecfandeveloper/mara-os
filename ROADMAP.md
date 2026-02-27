@@ -10,9 +10,9 @@
 - [x] Retención: últimos 30 días
 
 ### 1.2 Integración con Cron Real
-- [ ] Leer cron jobs reales de OpenClaw (`cron list`)
-- [ ] Mostrar en calendario con próximas ejecuciones
-- [ ] Historial de ejecuciones pasadas
+- [x] Leer cron jobs reales de OpenClaw (`cron list`) — `GET /api/cron` con `openclaw cron list --json --all`
+- [x] Mostrar en calendario con próximas ejecuciones — Cron page (CronWeeklyTimeline) + Calendar page (WeeklyCalendar usa `/api/cron`)
+- [x] Historial de ejecuciones pasadas — `GET /api/cron/runs?id=<id>`, botón History en CronJobCard
 
 ### 1.3 Stats Dashboard
 - [ ] Contador de actividades por día/semana
