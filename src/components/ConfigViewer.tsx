@@ -278,6 +278,12 @@ export function ConfigViewer({ onRefresh }: ConfigViewerProps) {
         </div>
       )}
 
+      <div
+        className="px-6 pt-4 pb-1 text-xs font-medium"
+        style={{ color: "var(--text-muted)" }}
+      >
+        Config (solo lectura, valores sensibles enmascarados)
+      </div>
       <pre
         className="p-6 overflow-auto text-sm"
         style={{

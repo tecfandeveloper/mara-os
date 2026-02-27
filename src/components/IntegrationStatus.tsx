@@ -199,11 +199,22 @@ export function IntegrationStatus({ integrations, onRefresh }: IntegrationStatus
 
               {result && (
                 <div
-                  className={`text-xs pl-12 ${
+                  className={`text-xs pl-12 flex flex-wrap items-center gap-x-2 gap-y-1 ${
                     result.ok ? "text-emerald-400" : "text-amber-400"
                   }`}
                 >
-                  {result.ok ? "OK" : ""} {result.message}
+                  <span>{result.ok ? "OK" : ""} {result.message}</span>
+                  {!result.ok && reauth && (
+                    <a
+                      href={reauth.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-emerald-400 hover:underline"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      {reauth.label}
+                    </a>
+                  )}
                 </div>
               )}
             </div>
