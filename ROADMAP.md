@@ -241,6 +241,8 @@ Estado actual: **Fases 1–4** completas (incl. Analytics, Cost Tracking, Perfor
 - `/api/subagents` - sub-agentes activos
 - Polling cada 2-5 segundos
 
+El plan detallado para llevar The Office al siguiente nivel (8.2 pendiente, 8.3 y mejoras futuras) está en [roadmap-office.md](./roadmap-office.md).
+
 ---
 
 ## Fase 9: Agent Intelligence (Semana 11)
@@ -412,7 +414,7 @@ Estado actual: **Fases 1–4** completas (incl. Analytics, Cost Tracking, Perfor
 **Fase 8: The Office 3D** - Entorno 3D inmersivo donde visualizar agentes trabajando
 - ~~MVP (8.1)~~ ✅ Hecho
 - ~~Interactions (8.2) parcial~~ ✅ Objetos clickeables (archivador, pizarra, café)
-- Multi-Floor (8.3) es opcional/futuro
+- Multi-Floor (8.3) es opcional/futuro — plan detallado en [roadmap-office.md](./roadmap-office.md)
 
 ### Tier 1: Core Functionality (Must Have) ✅
 1. **Fase 1** - Activity Logger Real ✅
