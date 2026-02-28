@@ -1,6 +1,7 @@
 /**
  * GET /api/subagents
  * List sub-agent sessions (from openclaw sessions list), with derived state and optional agent display info.
+ * Returns 200 with empty list when openclaw is not available (e.g. not in PATH) so the dashboard still works.
  */
 import { NextResponse } from "next/server";
 import { execSync } from "child_process";
@@ -145,9 +146,7 @@ export async function GET() {
     return NextResponse.json({ subagents, total: subagents.length });
   } catch (error) {
     console.error("[subagents] Error listing subagents:", error);
-    return NextResponse.json(
-      { error: "Failed to list subagents", subagents: [] },
-      { status: 500 }
-    );
+    // Return 200 with empty list so dashboard still works when openclaw is missing or fails
+    return NextResponse.json({ subagents: [], total: 0, _meta: { error: "openclaw unavailable or failed" } });
   }
 }

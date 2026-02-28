@@ -7,8 +7,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { execSync } from 'child_process';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { homedir } from 'os';
 
-const OPENCLAW_DIR = process.env.OPENCLAW_DIR || '/root/.openclaw';
+const OPENCLAW_DIR = process.env.OPENCLAW_DIR || join(homedir(), '.openclaw') || '/root/.openclaw';
 
 interface RawSession {
   key: string;
@@ -169,7 +170,8 @@ async function listSessions(): Promise<NextResponse> {
     return NextResponse.json({ sessions, total: sessions.length });
   } catch (error) {
     console.error('[sessions] Error listing sessions:', error);
-    return NextResponse.json({ error: 'Failed to list sessions', sessions: [] }, { status: 500 });
+    // Return 200 with empty list so dashboard still works when openclaw is missing or fails
+    return NextResponse.json({ sessions: [], total: 0, _meta: { error: 'openclaw unavailable or failed' } });
   }
 }
 

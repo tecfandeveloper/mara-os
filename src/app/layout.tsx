@@ -40,7 +40,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
-        <script dangerouslySetInnerHTML={{__html:"(()=>{const c=globalThis.crypto;if(c&&!c.randomUUID&&c.getRandomValues){c.randomUUID=()=>{const b=new Uint8Array(16);c.getRandomValues(b);b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const h=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);};}})();if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js')"}} />
+        <script dangerouslySetInnerHTML={{__html:"(()=>{var c=globalThis.crypto;if(!c){var getRandomValues=function(b){for(var i=0;i<b.length;i++)b[i]=Math.floor(Math.random()*256);return b;};c=globalThis.crypto={getRandomValues:getRandomValues,randomUUID:function(){var b=new Uint8Array(16);getRandomValues(b);b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;var h=Array.from(b).map(function(x){return x.toString(16).padStart(2,'0');}).join('');return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);}};}else if(!c.randomUUID&&c.getRandomValues){c.randomUUID=function(){var b=new Uint8Array(16);c.getRandomValues(b);b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;var h=Array.from(b).map(function(x){return x.toString(16).padStart(2,'0');}).join('');return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);};}})();if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js')"}} />
       </head>
       <body 
         className={`${inter.variable} ${sora.variable} ${jetbrainsMono.variable} font-sans`}

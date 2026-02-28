@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { BRANDING } from "@/config/branding";
+import { randomUUID } from "@/lib/client-uuid";
 import { Plus, Pencil, Trash2, Play, X, Save } from "lucide-react";
 
 interface Workflow {
@@ -252,11 +253,11 @@ function WorkflowTemplateEditor({
   const [name, setName] = useState(template?.name ?? "");
   const [description, setDescription] = useState(template?.description ?? "");
   const [steps, setSteps] = useState<WorkflowStepTemplate[]>(
-    template?.steps?.length ? template.steps : [{ id: crypto.randomUUID(), label: "Step 1", agentId: "main", execution: "sequential", dependencies: [] }]
+    template?.steps?.length ? template.steps : [{ id: randomUUID(), label: "Step 1", agentId: "main", execution: "sequential", dependencies: [] }]
   );
 
   const addStep = () => {
-    setSteps((s) => [...s, { id: crypto.randomUUID(), label: `Step ${s.length + 1}`, agentId: "main", execution: "sequential", dependencies: [] }]);
+    setSteps((s) => [...s, { id: randomUUID(), label: `Step ${s.length + 1}`, agentId: "main", execution: "sequential", dependencies: [] }]);
   };
   const removeStep = (id: string) => {
     setSteps((s) => s.filter((x) => x.id !== id));
