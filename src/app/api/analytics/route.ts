@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { format, subDays } from "date-fns";
+import { NextRequest, NextResponse } from "next/server";
+import { format, subDays, startOfDay } from "date-fns";
 import Database from "better-sqlite3";
 import path from "path";
 import { promises as fs } from "fs";
@@ -17,13 +17,18 @@ interface AnalyticsData {
   byDay: { date: string; count: number }[];
   byType: { type: string; count: number }[];
   byHour: { hour: number; day: number; count: number }[];
+  heatmapByDateHour?: { date: string; hour: number; count: number }[];
+  heatmapDates?: string[];
   successRate: number;
   averageResponseTimeMs: number | null;
   successRateByType: { type: string; total: number; success: number; successRate: number }[];
   uptimeSeconds: number;
 }
 
-export async function GET(): Promise<NextResponse<AnalyticsData>> {
+export async function GET(request: NextRequest): Promise<NextResponse<AnalyticsData>> {
+  const { searchParams } = new URL(request.url);
+  const heatmapDays = Math.min(14, Math.max(1, parseInt(searchParams.get("heatmapDays") || "0", 10)));
+
   // Try SQLite first, fallback to JSON
   let activities: ActivityRow[] = [];
 
@@ -88,6 +93,38 @@ export async function GET(): Promise<NextResponse<AnalyticsData>> {
     byHour.push({ hour, day, count });
   });
 
+  let heatmapByDateHour: { date: string; hour: number; count: number }[] | undefined;
+  let heatmapDates: string[] | undefined;
+  if (heatmapDays > 0) {
+    const dateHourMap = new Map<string, number>();
+    const today = startOfDay(new Date());
+    const dates: string[] = [];
+    for (let i = heatmapDays - 1; i >= 0; i--) {
+      const d = subDays(today, i);
+      const dateStr = format(d, "yyyy-MM-dd");
+      dates.push(dateStr);
+    }
+    activities.forEach((a) => {
+      try {
+        const ts = a.timestamp.slice(0, 10);
+        if (!dates.includes(ts)) return;
+        const hour = new Date(a.timestamp).getHours();
+        const key = `${ts}-${hour}`;
+        dateHourMap.set(key, (dateHourMap.get(key) || 0) + 1);
+      } catch {}
+    });
+    heatmapByDateHour = [];
+    dateHourMap.forEach((count, key) => {
+      const parts = key.split("-");
+      const hourNum = parseInt(parts[parts.length - 1], 10);
+      const dateStr = parts.slice(0, 3).join("-");
+      if (dateStr && !isNaN(hourNum)) {
+        heatmapByDateHour!.push({ date: dateStr, hour: hourNum, count });
+      }
+    });
+    heatmapDates = dates;
+  }
+
   // Success rate
   const successCount = activities.filter((a) => a.status === "success").length;
   const successRate = activities.length > 0 ? (successCount / activities.length) * 100 : 0;
@@ -122,7 +159,7 @@ export async function GET(): Promise<NextResponse<AnalyticsData>> {
   // Server uptime (Mission Control process)
   const uptimeSeconds = process.uptime();
 
-  return NextResponse.json({
+  const payload: AnalyticsData = {
     byDay,
     byType,
     byHour,
@@ -130,5 +167,8 @@ export async function GET(): Promise<NextResponse<AnalyticsData>> {
     averageResponseTimeMs,
     successRateByType,
     uptimeSeconds,
-  });
+  };
+  if (heatmapByDateHour) payload.heatmapByDateHour = heatmapByDateHour;
+  if (heatmapDates) payload.heatmapDates = heatmapDates;
+  return NextResponse.json(payload);
 }

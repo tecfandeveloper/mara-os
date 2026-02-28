@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { FileBarChart, FileText, RefreshCw, Clock, HardDrive } from "lucide-react";
+import { FileBarChart, FileText, RefreshCw, Clock, HardDrive, Share2, Copy, Download } from "lucide-react";
 import { MarkdownPreview } from "@/components/MarkdownPreview";
+import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 
 interface Report {
   name: string;
@@ -30,12 +31,39 @@ function formatDate(iso: string): string {
   });
 }
 
+type Preset = "7d" | "30d" | "month" | "custom";
+
+function getRange(preset: Preset): { startDate: string; endDate: string } {
+  const today = new Date();
+  if (preset === "7d") {
+    const start = subDays(today, 6);
+    return { startDate: format(start, "yyyy-MM-dd"), endDate: format(today, "yyyy-MM-dd") };
+  }
+  if (preset === "30d") {
+    const start = subDays(today, 29);
+    return { startDate: format(start, "yyyy-MM-dd"), endDate: format(today, "yyyy-MM-dd") };
+  }
+  if (preset === "month") {
+    const start = startOfMonth(today);
+    const end = endOfMonth(today);
+    return { startDate: format(start, "yyyy-MM-dd"), endDate: format(end, "yyyy-MM-dd") };
+  }
+  return { startDate: format(today, "yyyy-MM-dd"), endDate: format(today, "yyyy-MM-dd") };
+}
+
 export default function ReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
+
+  const [shareablePreset, setShareablePreset] = useState<Preset>("7d");
+  const [shareableCustomStart, setShareableCustomStart] = useState("");
+  const [shareableCustomEnd, setShareableCustomEnd] = useState("");
+  const [shareableGenerating, setShareableGenerating] = useState(false);
+  const [shareableResult, setShareableResult] = useState<{ token: string; expiresAt: string } | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState(false);
 
   const loadReports = useCallback(async () => {
     try {
@@ -77,6 +105,48 @@ export default function ReportsPage() {
   useEffect(() => {
     loadReports();
   }, [loadReports]);
+
+  const handleGenerateShareable = useCallback(async () => {
+    const { startDate, endDate } =
+      shareablePreset === "custom"
+        ? { startDate: shareableCustomStart, endDate: shareableCustomEnd }
+        : getRange(shareablePreset);
+    if (!startDate || !endDate) return;
+    setShareableGenerating(true);
+    setShareableResult(null);
+    try {
+      const res = await fetch("/api/reports/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ startDate, endDate }),
+      });
+      if (!res.ok) throw new Error("Failed to generate");
+      const data = await res.json();
+      setShareableResult({ token: data.token, expiresAt: data.expiresAt });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setShareableGenerating(false);
+    }
+  }, [shareablePreset, shareableCustomStart, shareableCustomEnd]);
+
+  const shareableLink = shareableResult
+    ? typeof window !== "undefined"
+      ? `${window.location.origin}/r/${shareableResult.token}`
+      : ""
+    : "";
+
+  const copyLink = useCallback(() => {
+    if (!shareableLink) return;
+    navigator.clipboard.writeText(shareableLink);
+    setCopyFeedback(true);
+    setTimeout(() => setCopyFeedback(false), 2000);
+  }, [shareableLink]);
+
+  const exportPdf = useCallback(() => {
+    if (!shareableResult) return;
+    window.open(`/api/reports/export?token=${encodeURIComponent(shareableResult.token)}`, "_blank");
+  }, [shareableResult]);
 
   // Auto-select first report
   useEffect(() => {
@@ -133,6 +203,111 @@ export default function ReportsPage() {
             borderBottom: "1px solid var(--border)",
           }}
         >
+          {/* Shareable report */}
+          <div
+            className="p-3 border-b"
+            style={{ borderColor: "var(--border)" }}
+          >
+            <h2 className="text-sm font-semibold uppercase tracking-wide mb-2 flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
+              <Share2 className="w-4 h-4" />
+              Shareable report
+            </h2>
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1">
+                {(["7d", "30d", "month"] as const).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setShareablePreset(p)}
+                    className="text-xs px-2 py-1 rounded"
+                    style={{
+                      backgroundColor: shareablePreset === p ? "var(--accent)" : "var(--background)",
+                      color: shareablePreset === p ? "var(--text-primary)" : "var(--text-secondary)",
+                      border: "1px solid var(--border)",
+                    }}
+                  >
+                    {p === "7d" ? "Last 7d" : p === "30d" ? "Last 30d" : "This month"}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setShareablePreset("custom")}
+                  className="text-xs px-2 py-1 rounded"
+                  style={{
+                    backgroundColor: shareablePreset === "custom" ? "var(--accent)" : "var(--background)",
+                    color: shareablePreset === "custom" ? "var(--text-primary)" : "var(--text-secondary)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  Custom
+                </button>
+              </div>
+              {shareablePreset === "custom" && (
+                <div className="flex gap-2 items-center text-xs">
+                  <input
+                    type="date"
+                    value={shareableCustomStart}
+                    onChange={(e) => setShareableCustomStart(e.target.value)}
+                    className="flex-1 rounded px-2 py-1"
+                    style={{ border: "1px solid var(--border)", backgroundColor: "var(--background)", color: "var(--text-primary)" }}
+                  />
+                  <span style={{ color: "var(--text-muted)" }}>–</span>
+                  <input
+                    type="date"
+                    value={shareableCustomEnd}
+                    onChange={(e) => setShareableCustomEnd(e.target.value)}
+                    className="flex-1 rounded px-2 py-1"
+                    style={{ border: "1px solid var(--border)", backgroundColor: "var(--background)", color: "var(--text-primary)" }}
+                  />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleGenerateShareable}
+                disabled={shareableGenerating || (shareablePreset === "custom" && (!shareableCustomStart || !shareableCustomEnd))}
+                className="w-full text-xs font-medium py-2 rounded flex items-center justify-center gap-2"
+                style={{
+                  backgroundColor: "var(--accent)",
+                  color: "var(--text-primary)",
+                  opacity: shareableGenerating ? 0.7 : 1,
+                }}
+              >
+                {shareableGenerating ? "Generating…" : "Generate report"}
+              </button>
+              {shareableResult && (
+                <div className="space-y-2 pt-2 border-t" style={{ borderColor: "var(--border)" }}>
+                  <div className="flex items-center gap-2">
+                    <input
+                      readOnly
+                      value={shareableLink}
+                      className="flex-1 text-xs rounded px-2 py-1 truncate"
+                      style={{ border: "1px solid var(--border)", backgroundColor: "var(--background)", color: "var(--text-primary)" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={copyLink}
+                      className="p-1.5 rounded"
+                      style={{ backgroundColor: "var(--background)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
+                      title="Copy link"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {copyFeedback && <span className="text-xs" style={{ color: "var(--success)" }}>Copied!</span>}
+                  <button
+                    type="button"
+                    onClick={exportPdf}
+                    className="w-full text-xs font-medium py-2 rounded flex items-center justify-center gap-2"
+                    style={{ backgroundColor: "var(--background)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
+                  >
+                    <Download className="w-4 h-4" />
+                    Export PDF
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div
             className="p-3"
             style={{ borderBottom: "1px solid var(--border)" }}

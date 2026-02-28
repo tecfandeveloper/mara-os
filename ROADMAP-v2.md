@@ -6,7 +6,7 @@ Este documento es el **plan de trabajo pendiente** reorganizado por impacto y ej
 
 ## 0. Todo list (checklist ejecutable)
 
-Una sola lista para marcar progreso. Orden: F0 → F1 → Quick wins → F2 → F3.
+Una sola lista para marcar progreso. Orden: F0 → F1 → Quick wins → F2 → F3 → F4.
 
 ### F0 — Fundaciones
 
@@ -44,35 +44,32 @@ Una sola lista para marcar progreso. Orden: F0 → F1 → Quick wins → F2 → 
 
 ### F2 — Growth
 
-- [ ] Office 3D: sub-agents como visitantes en la oficina
-- [ ] Office 3D: trail visual parent ↔ sub-agent
-- [ ] Office 3D: efectos (partículas success, humo error, beam heartbeat)
-- [ ] Office 3D: sonido ambiental toggleable (teclas, notificaciones, lofi)
-- [ ] Office 3D: 4 plantas navegables con ascensor (Main Office, Server Room, Archive, Control Tower)
-- [ ] Office 3D: temas (modern, retro, cyberpunk, matrix) y modos (Focus, God, Cinematic)
-- [ ] Smart Suggestions: analizar patrones y sugerir optimizaciones (modelo, cron, heartbeats, horarios)
-- [ ] Smart Suggestions: tarjetas con Apply/Dismiss y aprender de dismissals
-- [ ] Shareable Reports: report semanal/mensual, export PDF, link público read-only, rangos de fecha
+- [x] Smart Suggestions: analizar patrones y sugerir optimizaciones (modelo, cron, heartbeats, horarios)
+- [x] Smart Suggestions: tarjetas con Apply/Dismiss y aprender de dismissals
+- [x] Shareable Reports: report semanal/mensual, export PDF, link público read-only, rangos de fecha
 
-### F3 — Escalado
+### F3 — Escalado (observabilidad y exploración)
 
-- [ ] Knowledge Graph Viewer: grafo de conceptos/entidades, click→snippets, clustering, búsqueda visual, export imagen
+- [x] Knowledge Graph Viewer: grafo de conceptos/entidades, click→snippets, clustering, búsqueda visual, export imagen
+- [x] Heatmaps: grid 24x7 actividad, hover detalles, click→filtrar feed, export imagen
+- [x] Sankey: flujos tokens (input→cache→output), tareas (type→status), tiempo (hora→actividad→resultado)
+- [x] Word Cloud memories: palabras frecuentes en MEMORY.md, click→buscar, animación hover
+
+### F4 — Colaboración (futuro)
+
+- [ ] Team Dashboard (futuro): multi-user, actividad otros agentes, comparar performance, shared memory bank
 - [ ] Model Playground: input prompt, comparar modelos lado a lado, tokens/coste/tiempo, guardar y share
 - [ ] 3D Workspace Explorer: árbol de archivos en 3D (tamaño/color por tipo), click→preview/edit
-- [ ] Heatmaps: grid 24x7 actividad, hover detalles, click→filtrar feed, export imagen
-- [ ] Sankey: flujos tokens (input→cache→output), tareas (type→status), tiempo (hora→actividad→resultado)
-- [ ] Word Cloud memories: palabras frecuentes en MEMORY.md, click→buscar, animación hover
-- [ ] Team Dashboard (futuro): multi-user, actividad otros agentes, comparar performance, shared memory bank
 
 ---
 
 ## 1. Resumen ejecutivo
 
-**Qué se construye:** Un panel de control (Mission Control) para operar y observar el agente OpenClaw/Tenacitas: configuración, integraciones, skills, estado en tiempo real, consumo de tokens, oficina 3D y visualizaciones avanzadas del conocimiento y la actividad.
+**Qué se construye:** Un panel de control (Mission Control) para operar y observar el agente OpenClaw/Tenacitas: configuración, integraciones, skills, estado en tiempo real, consumo de tokens y visualizaciones avanzadas del conocimiento y la actividad.
 
 **Para quién:** El operador o administrador del agente (una persona o equipo que mantiene, configura y optimiza la instancia de OpenClaw).
 
-**Éxito significa:** (1) Poder activar/desactivar e instalar/actualizar skills sin tocar código. (2) Ver y probar el estado de las integraciones (Twitter, Gmail, etc.) y reautenticar cuando falle. (3) Ver y editar la configuración de OpenClaw de forma segura y con validación. (4) Tener visibilidad en tiempo real de la actividad del agente y del estado del sistema (heartbeat, cola, recursos). (5) Entender y optimizar el gasto en tokens y el “estado” del agente (mood, sugerencias). (6) Opcional: experiencia “wow” con Office 3D multi-planta, Knowledge Graph y visualizaciones avanzadas, y en el futuro colaboración multi-usuario.
+**Éxito significa:** (1) Poder activar/desactivar e instalar/actualizar skills sin tocar código. (2) Ver y probar el estado de las integraciones (Twitter, Gmail, etc.) y reautenticar cuando falle. (3) Ver y editar la configuración de OpenClaw de forma segura y con validación. (4) Tener visibilidad en tiempo real de la actividad del agente y del estado del sistema (heartbeat, cola, recursos). (5) Entender y optimizar el gasto en tokens y el “estado” del agente (mood, sugerencias). (6) Opcional: experiencia “wow” con Knowledge Graph y visualizaciones avanzadas, y en el futuro colaboración multi-usuario.
 
 ---
 
@@ -84,7 +81,6 @@ Una sola lista para marcar progreso. Orden: F0 → F1 → Quick wins → F2 → 
 |------|-----|----------|
 | **Config** | Skills (toggle, instalar desde ClawHub, actualizar), Integration Status (estado, última actividad, test, reauth), Config Editor (ver, editar valores seguros, validar, reiniciar gateway) | — |
 | **Real-time** | Activity feed en tiempo real, indicador “Tenacitas está trabajando”, toasts; heartbeat, CPU/memoria VPS, cola de tareas | — |
-| **Office 3D** | Sub-agents como visitantes, trail parent↔sub-agent, efectos (partículas, humo, beam), sonido ambiental toggleable | Multi-planta (4 plantas + ascensor), temas y modos (Focus, God, Cinematic) |
 | **Agent Intelligence** | Mood dashboard (estado, streak, energy, emoji), Token Economics (vista detallada, breakdown, comparativas, proyección, top 5 tareas, efficiency score) | Knowledge Graph Viewer, Model Playground, Smart Suggestions Engine |
 | **Visualizaciones** | — | 3D Workspace Explorer, Heatmaps, Sankey, Word Cloud memories |
 | **Collaboration** | — | Shareable reports (PDF, link público), Team Dashboard (multi-user, actividad otros agentes, shared memory) |
@@ -109,7 +105,6 @@ Agrupación por dominios para priorizar y planificar.
 | **Integraciones** | Estado de conexiones (Twitter, Gmail, etc.), última actividad, test de conectividad, reautenticar |
 | **Config Editor** | Ver config OpenClaw, editar valores seguros, validación, reiniciar gateway si aplica |
 | **Real-time / Activity** | Activity feed en tiempo real, “Tenacitas está trabajando”, toasts; heartbeat, CPU/memoria VPS, cola de tareas |
-| **Office 3D** | Sub-agents visitantes, trail parent↔sub-agent, efectos y sonido; multi-planta, temas, modos |
 | **Agent Intelligence** | Mood dashboard, Token Economics, Knowledge Graph, Model Playground, Smart Suggestions |
 | **Visualizaciones avanzadas** | 3D Workspace Explorer, Heatmaps, Sankey, Word Cloud memories |
 | **Collaboration** | Shareable reports, Team Dashboard (multi-user) |
@@ -153,16 +148,14 @@ Mejora la experiencia y el “wow” sin ser bloqueante.
 
 | Ítem | Objetivo | Alcance | Dependencias | Esfuerzo | Riesgo | Criterio de aceptación |
 |------|----------|---------|--------------|----------|--------|-------------------------|
-| **Office 3D: interacciones y ambient** | Oficina más viva y comprensible | Sub-agents como visitantes, trail parent↔sub-agent, efectos (partículas success, humo error, beam heartbeat), sonido ambiental (teclas, notificaciones, lofi) toggleable | Office 3D actual (8.1–8.2) | M | M | Sub-agents visibles, trail y efectos funcionando, sonido opcional |
-| **Office 3D: multi-planta** | Navegación por “pisos” temáticos | 4 plantas (Main Office, Server Room, Archive, Control Tower) con ascensor; temas (modern, retro, cyberpunk, matrix); modos Focus, God, Cinematic | Office 3D F2 anterior | L | M | Usuario cambia de planta, elige tema y modo |
 | **Smart Suggestions Engine** | Que el sistema sugiera mejoras | Analizar patrones, sugerir optimizaciones (modelo, cron, heartbeats, horarios), tarjetas con Apply/Dismiss, aprender de dismissals | Datos de actividad, cron, tokens | L | A | Operador ve sugerencias accionables y puede aplicar o descartar; los descartes influyen en futuras sugerencias |
 | **Shareable Reports** | Compartir resumen de actividad | Report semanal/mensual, export PDF, link público read-only, rangos de fecha custom | Activity/analytics existentes | M | B | Operador genera un report y lo comparte por link o PDF |
 
 ---
 
-### F3 — Escalado (rendimiento, observabilidad, compliance)
+### F3 — Escalado (observabilidad y exploración)
 
-Observabilidad avanzada, escalado y preparación para equipo.
+Observabilidad avanzada: conocimiento, modelos, workspace, actividad y memoria.
 
 | Ítem | Objetivo | Alcance | Dependencias | Esfuerzo | Riesgo | Criterio de aceptación |
 |------|----------|---------|--------------|----------|--------|-------------------------|
@@ -172,6 +165,12 @@ Observabilidad avanzada, escalado y preparación para equipo.
 | **Heatmaps interactivos** | Actividad por tiempo | Grid 24x7, hover con detalles, click → filtrar activity feed, export imagen | Activity feed con timestamps | M | B | Operador ve calor de actividad por hora/día y puede filtrar |
 | **Sankey Diagrams** | Flujos de tokens, tareas y tiempo | Flujos: tokens (input→cache→output), tareas (type→status), tiempo (hora→actividad→resultado) | Datos ya existentes de tokens y actividades | M | B | Operador ve al menos un flujo Sankey útil (p. ej. tokens o tareas) |
 | **Word Cloud memories** | Resumen visual de MEMORY | Palabras frecuentes en MEMORY.md, tamaño = frecuencia, click → buscar en memories, animación hover | Acceso a MEMORY.md / memories | S | B | Operador ve nube de palabras y puede profundizar en una |
+### F4 — Colaboración (futuro)
+
+Multi-usuario y comparación entre agentes.
+
+| Ítem | Objetivo | Alcance | Dependencias | Esfuerzo | Riesgo | Criterio de aceptación |
+|------|----------|---------|--------------|----------|--------|-------------------------|
 | **Team Dashboard (futuro)** | Multi-usuario y comparación | Multi-user, actividad de otros agentes, comparar performance, shared memory bank | Auth multi-usuario, modelo de “equipo” | L | A | (Futuro) Varios usuarios ven sus agentes y comparten memoria |
 
 ---
@@ -204,7 +203,7 @@ Observabilidad avanzada, escalado y preparación para equipo.
 ### Parking lot (fuera de foco para este plan)
 
 - **Performance Metrics (4.3)** — Si no está ya implementado en ROADMAP.md, se deja en parking: se cubre parcialmente con “System Status (CPU/memoria, cola)” y Token Economics. Una vista dedicada “4.3” puede ser F2/F3 cuando se priorice analítica de rendimiento puro.
-- **Team Dashboard** — Marcado explícitamente como “futuro” y F3; no forma parte del MVP ni del primer ciclo de growth.
+- **Team Dashboard** — Marcado explícitamente como “futuro” y F4; no forma parte del MVP ni del primer ciclo de growth.
 - **Share results (copy link)** del Model Playground — Depende de que exista un modelo de “experimento” y URLs; se mantiene en alcance del ítem pero no como quick win.
 
 ---
@@ -223,8 +222,7 @@ Criterio: impacto operativo vs esfuerzo; quick wins = entregables en 1–3 días
 | 6 | **System Status (heartbeat + cola)** | Evita “¿está vivo?”. Esfuerzo M. | [ ] Vista mínima: último heartbeat + número de tareas en cola |
 | 7 | **Mood Dashboard** | Engagement y lectura rápida. Esfuerzo M. | [ ] Widget con estado (productivo/ocupado/idle) + streak |
 | 8 | **Smart Suggestions Engine** | Auto-mejora a largo plazo. Esfuerzo L, riesgo A. | [ ] Tarjetas estáticas de “sugerencias tipo” (sin ML) para validar UX |
-| 9 | **Office 3D: interacciones y ambient** | Wow y claridad de sub-agents. Esfuerzo M. | [ ] Sub-agents como visitantes + trail parent↔sub-agent |
-| 10 | **Shareable Reports** | Compartir con stakeholders. Esfuerzo M. | [ ] Export a PDF del report de actividad (rango de fechas) |
+| 9 | **Shareable Reports** | Compartir con stakeholders. Esfuerzo M. | [ ] Export a PDF del report de actividad (rango de fechas) |
 
 **Quick wins resumidos (1–3 días cada uno):**
 
@@ -285,8 +283,7 @@ Milestones semanales con entregables medibles.
 - **Objetivo:** Cerrar bugs de las semanas 1–3 y entregar 1–2 quick wins de F2.
 - [ ] Correcciones y ajustes de UX de Config, Integration Status y Token Economics.
 - [ ] **Quick win opcional A:** Shareable report (export PDF con rango de fechas).
-- [ ] **Quick win opcional B:** Office 3D — sub-agents como visitantes y trail parent↔sub-agent (si dependencias listas).
-- **Entregable medible:** Sin regresiones críticas; al menos un report exportable o mejora clara en Office 3D.
+- **Entregable medible:** Sin regresiones críticas; al menos un report exportable.
 
 ---
 
@@ -308,8 +305,6 @@ flowchart LR
   end
 
   subgraph F2["F2 Growth"]
-    H[Office 3D interacciones]
-    I[Office 3D multi-planta]
     J[Smart Suggestions]
     K[Shareable Reports]
   end
@@ -320,12 +315,15 @@ flowchart LR
     N[Heatmaps/Sankey/WordCloud]
   end
 
+  subgraph F4["F4 Colaboración"]
+    O[Team Dashboard]
+  end
+
   A --> D
   B --> D
   C --> D
   E --> G
   F --> J
-  H --> I
   G --> J
   D --> K
 ```

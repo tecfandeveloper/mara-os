@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ActivityLineChart } from "@/components/charts/ActivityLineChart";
 import { ActivityPieChart } from "@/components/charts/ActivityPieChart";
 import { HourlyHeatmap } from "@/components/charts/HourlyHeatmap";
+import { ActivityHeatmap24x7 } from "@/components/charts/ActivityHeatmap24x7";
 import { SuccessRateGauge } from "@/components/charts/SuccessRateGauge";
 import { BarChart3, TrendingUp, Clock, Target, Gauge, Activity, Server } from "lucide-react";
 
@@ -11,6 +14,8 @@ interface AnalyticsData {
   byDay: { date: string; count: number }[];
   byType: { type: string; count: number }[];
   byHour: { hour: number; day: number; count: number }[];
+  heatmapByDateHour?: { date: string; hour: number; count: number }[];
+  heatmapDates?: string[];
   successRate: number;
   averageResponseTimeMs: number | null;
   successRateByType: { type: string; total: number; success: number; successRate: number }[];
@@ -29,11 +34,12 @@ function formatUptime(seconds: number): string {
 }
 
 export default function AnalyticsPage() {
+  const router = useRouter();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/analytics")
+    fetch("/api/analytics?heatmapDays=7")
       .then((r) => r.json())
       .then((data) => {
         setData(data);
@@ -75,16 +81,25 @@ export default function AnalyticsPage() {
 
   return (
     <div className="p-4 md:p-8" style={{ backgroundColor: "var(--background)", minHeight: "100vh" }}>
-      <div className="mb-4 md:mb-8">
-        <h1
-          className="text-2xl md:text-3xl font-bold mb-2"
-          style={{ color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}
+      <div className="mb-4 md:mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1
+            className="text-2xl md:text-3xl font-bold mb-2"
+            style={{ color: "var(--text-primary)", fontFamily: "var(--font-heading)" }}
+          >
+            📊 Analytics
+          </h1>
+          <p className="text-sm md:text-base" style={{ color: "var(--text-secondary)" }}>
+            Insights and trends from agent activity
+          </p>
+        </div>
+        <Link
+          href="/sankey"
+          className="text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+          style={{ color: "var(--accent)", border: "1px solid var(--border)", backgroundColor: "var(--card)" }}
         >
-          📊 Analytics
-        </h1>
-        <p className="text-sm md:text-base" style={{ color: "var(--text-secondary)" }}>
-          Insights and trends from agent activity
-        </p>
+          Sankey diagrams →
+        </Link>
       </div>
 
       {/* Stats Cards */}
@@ -249,7 +264,7 @@ export default function AnalyticsPage() {
           <ActivityPieChart data={data.byType} />
         </div>
 
-        {/* Hourly Heatmap */}
+        {/* Hourly Heatmap (24x7, click to filter activity feed) */}
         <div
           className="rounded-xl p-4 md:p-6"
           style={{ backgroundColor: "var(--card)", border: "1px solid var(--border)" }}
@@ -263,7 +278,16 @@ export default function AnalyticsPage() {
               Activity by Hour
             </h2>
           </div>
-          <HourlyHeatmap data={data.byHour} />
+          {data.heatmapDates && data.heatmapByDateHour ? (
+            <ActivityHeatmap24x7
+              heatmapByDateHour={data.heatmapByDateHour}
+              heatmapDates={data.heatmapDates}
+              onCellClick={(date) => router.push(`/activity?startDate=${date}&endDate=${date}`)}
+              showExport
+            />
+          ) : (
+            <HourlyHeatmap data={data.byHour} />
+          )}
         </div>
 
         {/* Success Rate Gauge */}

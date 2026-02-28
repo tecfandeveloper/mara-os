@@ -4,8 +4,11 @@ import type { NextRequest } from "next/server";
 // Routes that never require authentication
 const PUBLIC_ROUTES = new Set(["/login"]);
 
-// API routes that are always public (auth endpoints + health check)
-const PUBLIC_API_PREFIXES = ["/api/auth/", "/api/health"];
+// Shareable report pages: /r/[token]
+const PUBLIC_REPORT_PREFIX = "/r/";
+
+// API routes that are always public (auth endpoints + health check + shared reports)
+const PUBLIC_API_PREFIXES = ["/api/auth/", "/api/health", "/api/reports/shared"];
 
 function isAuthenticated(request: NextRequest): boolean {
   const authCookie = request.cookies.get("mc_auth");
@@ -15,8 +18,8 @@ function isAuthenticated(request: NextRequest): boolean {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Always allow public pages (login)
-  if (PUBLIC_ROUTES.has(pathname)) {
+  // Always allow public pages (login, shareable report)
+  if (PUBLIC_ROUTES.has(pathname) || pathname.startsWith(PUBLIC_REPORT_PREFIX)) {
     return NextResponse.next();
   }
 

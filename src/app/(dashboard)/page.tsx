@@ -6,6 +6,7 @@ import { ActivityFeed, Activity as ActivityItem } from "@/components/ActivityFee
 import { WeatherWidget } from "@/components/WeatherWidget";
 import { Notepad } from "@/components/Notepad";
 import { MoodDashboard } from "@/components/MoodDashboard";
+import { SmartSuggestions } from "@/components/SmartSuggestions";
 import {
   Activity,
   CheckCircle,
@@ -430,6 +431,7 @@ export default function DashboardPage() {
         {/* Mood + Quick Links */}
         <div className="space-y-4">
           <MoodDashboard />
+          <SmartSuggestions />
           <div 
             className="rounded-xl overflow-hidden"
             style={{
@@ -454,7 +456,7 @@ export default function DashboardPage() {
                 </h2>
               </div>
             </div>
-          <div className="p-4 grid grid-cols-2 gap-2">
+            <div className="p-4 grid grid-cols-2 gap-2">
             {[
               { href: "/cron", icon: Calendar, label: "Cron Jobs", color: "#a78bfa" },
               { href: "/actions", icon: Zap, label: "Quick Actions", color: "var(--accent)" },
@@ -482,6 +484,7 @@ export default function DashboardPage() {
             <Notepad />
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { ActivityHeatmap } from "@/components/ActivityHeatmap";
 import {
@@ -97,23 +98,35 @@ function formatTokens(tokens: number): string {
   return `${(tokens / 1000).toFixed(1)}k`;
 }
 
-export default function ActivityPage() {
+function ActivityPageContent() {
+  const searchParams = useSearchParams();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(0);
-  
-  // Filters
+
+  const urlStart = searchParams.get("startDate") ?? "";
+  const urlEnd = searchParams.get("endDate") ?? "";
+
+  // Filters (initialize from URL when present)
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>(urlStart);
+  const [endDate, setEndDate] = useState<string>(urlEnd);
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
-  const [activePreset, setActivePreset] = useState<number | null>(1); // Default: Last 7 days
+  const [activePreset, setActivePreset] = useState<number | null>(urlStart && urlEnd ? null : 1);
 
   const limit = 20;
+
+  useEffect(() => {
+    if (urlStart || urlEnd) {
+      setStartDate(urlStart);
+      setEndDate(urlEnd);
+      setActivePreset(null);
+    }
+  }, [urlStart, urlEnd]);
 
   const fetchActivities = useCallback(async (append = false) => {
     const currentOffset = append ? offset : 0;
@@ -598,5 +611,19 @@ export default function ActivityPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ActivityPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-4 md:p-8 flex items-center justify-center min-h-[60vh]" style={{ backgroundColor: "var(--background)" }}>
+          <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: "var(--accent)" }} />
+        </div>
+      }
+    >
+      <ActivityPageContent />
+    </Suspense>
   );
 }

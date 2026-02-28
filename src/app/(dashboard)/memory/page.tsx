@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Eye, Edit3, RefreshCw, Brain, Search, FilePlus, X } from "lucide-react";
+import Link from "next/link";
+import { Eye, Edit3, RefreshCw, Brain, Search, FilePlus, X, Cloud, Network } from "lucide-react";
 import { FileTree, FileNode } from "@/components/FileTree";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { MarkdownPreview } from "@/components/MarkdownPreview";
 import { MemoryMdViewer } from "@/components/MemoryMdViewer";
+import { WordCloudMemories } from "@/components/WordCloudMemories";
 import { useDebounce } from "@/hooks/useDebounce";
 
 type ViewMode = "edit" | "preview";
@@ -41,6 +43,7 @@ export default function MemoryPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [newFileName, setNewFileName] = useState("");
   const [showNewFile, setShowNewFile] = useState(false);
+  const [showWordCloud, setShowWordCloud] = useState(false);
 
   const debouncedSearch = useDebounce(searchQuery, 300);
   const hasUnsavedChanges = content !== originalContent;
@@ -534,6 +537,33 @@ export default function MemoryPage() {
                     </button>
                   </div>
                   )}
+                  <Link
+                    href="/knowledge"
+                    title="Knowledge Graph"
+                    className="flex items-center justify-center rounded-md p-1.5 transition-colors hover:opacity-80"
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    <Network size={14} />
+                  </Link>
+                  <button
+                    onClick={() => setShowWordCloud((v) => !v)}
+                    title={showWordCloud ? "Hide word cloud" : "Show word cloud"}
+                    style={{
+                      padding: "5px 7px",
+                      borderRadius: "6px",
+                      backgroundColor: showWordCloud ? "var(--accent-soft)" : "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      color: showWordCloud ? "var(--accent)" : "var(--text-muted)",
+                      display: "flex",
+                      alignItems: "center",
+                      transition: "all 120ms ease",
+                    }}
+                    onMouseEnter={(e) => { if (!showWordCloud) e.currentTarget.style.color = "var(--text-primary)"; }}
+                    onMouseLeave={(e) => { if (!showWordCloud) e.currentTarget.style.color = "var(--text-muted)"; }}
+                  >
+                    <Cloud size={14} />
+                  </button>
                   <button
                     onClick={() => selectedWorkspace && loadFileTree(selectedWorkspace)}
                     title="Refresh"
@@ -555,6 +585,18 @@ export default function MemoryPage() {
                   </button>
                 </div>
               </div>
+
+              {showWordCloud && selectedWorkspace && (
+                <div style={{ flexShrink: 0, padding: "12px 16px", borderBottom: "1px solid var(--border)" }}>
+                  <WordCloudMemories
+                    workspace={selectedWorkspace}
+                    onWordClick={(word) => {
+                      setSearchQuery(word);
+                      setSearchOpen(true);
+                    }}
+                  />
+                </div>
+              )}
 
               {/* File tree + editor */}
               <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
