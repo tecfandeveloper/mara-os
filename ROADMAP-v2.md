@@ -58,8 +58,8 @@ Una sola lista para marcar progreso. Orden: F0 → F1 → Quick wins → F2 → 
 ### F4 — Colaboración (futuro)
 
 - [ ] Team Dashboard (futuro): multi-user, actividad otros agentes, comparar performance, shared memory bank
-- [ ] Model Playground: input prompt, comparar modelos lado a lado, tokens/coste/tiempo, guardar y share
-- [ ] 3D Workspace Explorer: árbol de archivos en 3D (tamaño/color por tipo), click→preview/edit
+- [x] Model Playground: input prompt, comparar modelos lado a lado, tokens/coste/tiempo, guardar y share
+- [x] 3D Workspace Explorer: árbol de archivos en 3D (tamaño/color por tipo), click→preview/edit
 
 ---
 
@@ -172,6 +172,8 @@ Multi-usuario y comparación entre agentes.
 | Ítem | Objetivo | Alcance | Dependencias | Esfuerzo | Riesgo | Criterio de aceptación |
 |------|----------|---------|--------------|----------|--------|-------------------------|
 | **Team Dashboard (futuro)** | Multi-usuario y comparación | Multi-user, actividad de otros agentes, comparar performance, shared memory bank | Auth multi-usuario, modelo de “equipo” | L | A | (Futuro) Varios usuarios ven sus agentes y comparten memoria |
+
+Completado: Model Playground y 3D Workspace Explorer (feb 2026). Pendiente: Team Dashboard.
 
 ---
 

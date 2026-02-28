@@ -16,6 +16,8 @@ import {
   Settings,
   History,
   MessageSquare,
+  FlaskConical,
+  Boxes,
 } from "lucide-react";
 
 const dockItems = [
@@ -32,6 +34,8 @@ const dockItems = [
   { href: "/notifications-log", label: "Notifications Log", icon: MessageSquare },
   { href: "/skills", label: "Skills", icon: Puzzle },
   { href: "/costs", label: "Costs & Analytics", icon: DollarSign },
+  { href: "/playground", label: "Model Playground", icon: FlaskConical },
+  { href: "/workspace-3d", label: "Workspace 3D", icon: Boxes },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
