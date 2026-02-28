@@ -22,25 +22,25 @@ Una sola lista para marcar progreso. Orden: F0 → F1 → Quick wins → F2 → 
 
 ### F1 — MVP
 
-- [ ] Live Activity: activity feed en tiempo real en Dashboard
-- [ ] Live Activity: indicador "Tenacitas está trabajando"
-- [ ] Live Activity: toasts de notificaciones
-- [ ] System Status: vista con último heartbeat del agente
-- [ ] System Status: cola de tareas pendientes
-- [ ] System Status: CPU/memoria del VPS (vista dedicada)
-- [ ] Token Economics: vista de consumo por modelo (Opus, Sonnet, Haiku, etc.)
-- [ ] Token Economics: breakdown input/output/cache y comparativas (hoy/ayer, semana)
-- [ ] Token Economics: proyección mensual, top 5 tareas, efficiency score
-- [ ] Mood Dashboard: widget estado (productivo, ocupado, idle, frustrado)
-- [ ] Mood Dashboard: streak días sin errores críticos, energy (tokens/hora), emoji animado
+- [x] Live Activity: activity feed en tiempo real en Dashboard
+- [x] Live Activity: indicador "Tenacitas está trabajando"
+- [x] Live Activity: toasts de notificaciones
+- [x] System Status: vista con último heartbeat del agente
+- [x] System Status: cola de tareas pendientes
+- [x] System Status: CPU/memoria del VPS (vista dedicada)
+- [x] Token Economics: vista de consumo por modelo (Opus, Sonnet, Haiku, etc.)
+- [x] Token Economics: breakdown input/output/cache y comparativas (hoy/ayer, semana)
+- [x] Token Economics: proyección mensual, top 5 tareas, efficiency score
+- [x] Mood Dashboard: widget estado (productivo, ocupado, idle, frustrado)
+- [x] Mood Dashboard: streak días sin errores críticos, energy (tokens/hora), emoji animado
 
 ### Quick wins (1–3 días cada uno)
 
-- [ ] Config Viewer read-only con máscara de sensibles
-- [ ] Indicador "Tenacitas está trabajando" en header o dashboard
-- [ ] Integration Status: lista + estado + botón Test por integración
-- [ ] Toggle activar/desactivar skill
-- [ ] Vista mínima System Status: último heartbeat + tamaño de cola
+- [x] Config Viewer read-only con máscara de sensibles
+- [x] Indicador "Tenacitas está trabajando" en header o dashboard
+- [x] Integration Status: lista + estado + botón Test por integración
+- [x] Toggle activar/desactivar skill
+- [x] Vista mínima System Status: último heartbeat + tamaño de cola
 
 ### F2 — Growth
 

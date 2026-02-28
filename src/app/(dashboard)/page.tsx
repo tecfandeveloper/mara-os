@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { StatsCard } from "@/components/StatsCard";
-import { ActivityFeed } from "@/components/ActivityFeed";
+import { ActivityFeed, Activity as ActivityItem } from "@/components/ActivityFeed";
 import { WeatherWidget } from "@/components/WeatherWidget";
 import { Notepad } from "@/components/Notepad";
+import { MoodDashboard } from "@/components/MoodDashboard";
 import {
   Activity,
   CheckCircle,
@@ -24,6 +25,7 @@ import {
   Percent,
 } from "lucide-react";
 import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
 
 interface Stats {
   total: number;
@@ -48,12 +50,17 @@ interface Agent {
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({ total: 0, today: 0, thisWeek: 0, success: 0, error: 0, byType: {} });
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [isWorking, setIsWorking] = useState(false);
+  const [agentHeartbeat, setAgentHeartbeat] = useState<string | null>(null);
+  const [cronQueue, setCronQueue] = useState<{ pending: number; nextRun: string | null } | null>(null);
+  const [activityToast, setActivityToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/activities/stats").then(r => r.json()),
       fetch("/api/agents").then(r => r.json()),
-    ]).then(([actStats, agentsData]) => {
+      fetch("/api/cron").then(r => r.ok ? r.json() : []),
+    ]).then(([actStats, agentsData, cronJobs]) => {
       setStats({
         total: actStats.total || 0,
         today: actStats.today || 0,
@@ -62,12 +69,66 @@ export default function DashboardPage() {
         error: actStats.byStatus?.error || 0,
         byType: actStats.byType || {},
       });
-      setAgents(agentsData.agents || []);
+      const loadedAgents: Agent[] = agentsData.agents || [];
+      setAgents(loadedAgents);
+
+      const mainAgent = loadedAgents.find((a) => a.id === "main") || loadedAgents[0];
+      if (mainAgent?.lastActivity) {
+        setAgentHeartbeat(mainAgent.lastActivity);
+      }
+
+      const jobs: Array<{ enabled?: boolean; nextRun?: string | null }> = Array.isArray(cronJobs) ? cronJobs : [];
+      const enabledJobs = jobs.filter((j) => j.enabled !== false);
+      const withNextRun = enabledJobs.filter((j) => j.nextRun);
+      let nextRun: string | null = null;
+      if (withNextRun.length > 0) {
+        const earliest = withNextRun
+          .map((j) => new Date(j.nextRun as string))
+          .filter((d) => !Number.isNaN(d.getTime()))
+          .sort((a, b) => a.getTime() - b.getTime())[0];
+        if (earliest) nextRun = earliest.toISOString();
+      }
+      setCronQueue({ pending: enabledJobs.length, nextRun });
     }).catch(console.error);
   }, []);
 
+  const handleNewActivity = (activity: ActivityItem) => {
+    if (activity.status === "error") {
+      const msg = activity.description || "Activity error";
+      setActivityToast({ type: "error", message: msg.length > 160 ? msg.slice(0, 157) + "..." : msg });
+      setTimeout(() => setActivityToast(null), 4000);
+    }
+  };
+
   return (
     <div className="p-4 md:p-8">
+      {/* Activity Toast */}
+      {activityToast && (
+        <div
+          className="fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg max-w-sm"
+          style={{
+            backgroundColor: "rgba(15,23,42,0.95)",
+            border: "1px solid var(--border)",
+            color: activityToast.type === "error" ? "var(--error)" : "var(--success)",
+            fontSize: "0.85rem",
+          }}
+        >
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5">
+              {activityToast.type === "error" ? "⚠️" : "✅"}
+            </span>
+            <div className="flex-1">
+              <p className="font-semibold mb-0.5">
+                {activityToast.type === "error" ? "Activity error" : "Activity"}
+              </p>
+              <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                {activityToast.message}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-4 md:mb-6">
         <h1 
@@ -83,6 +144,33 @@ export default function DashboardPage() {
         <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
           Resumen en tiempo real de la actividad de Mara y OpenClaw
         </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+            style={{
+              backgroundColor: isWorking ? "rgba(34,197,94,0.12)" : "rgba(148,163,184,0.16)",
+              color: isWorking ? "var(--success)" : "var(--text-muted)",
+            }}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${isWorking ? "animate-pulse" : ""}`}
+              style={{ backgroundColor: isWorking ? "var(--success)" : "var(--text-muted)" }}
+            />
+            Tenacitas {isWorking ? "está trabajando" : "idle"}
+          </span>
+          {agentHeartbeat && (
+            <span
+              className="px-2.5 py-1 rounded-full text-xs font-medium"
+              style={{
+                backgroundColor: "rgba(59,130,246,0.12)",
+                color: "var(--info, #60a5fa)",
+              }}
+            >
+              Último heartbeat:{" "}
+              {formatDistanceToNow(new Date(agentHeartbeat), { addSuffix: true })}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Stats Grid + Weather */}
@@ -229,6 +317,19 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="p-5">
+          {cronQueue && (
+            <div className="flex items-center justify-between mb-4 text-xs" style={{ color: "var(--text-secondary)" }}>
+              <span>
+                Cola de tareas: {cronQueue.pending} cron job{cronQueue.pending === 1 ? "" : "s"} activos
+              </span>
+              {cronQueue.nextRun && (
+                <span>
+                  Próxima ejecución:{" "}
+                  {new Date(cronQueue.nextRun).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {agents.map((agent) => (
               <div
@@ -317,35 +418,42 @@ export default function DashboardPage() {
             </a>
           </div>
           <div className="p-0">
-            <ActivityFeed limit={5} />
+            <ActivityFeed
+              limit={5}
+              realtime
+              onWorkStateChange={setIsWorking}
+              onNewActivity={handleNewActivity}
+            />
           </div>
         </div>
 
-        {/* Quick Links */}
-        <div 
-          className="rounded-xl overflow-hidden"
-          style={{
-            backgroundColor: 'var(--card)',
-            border: '1px solid var(--border)',
-          }}
-        >
+        {/* Mood + Quick Links */}
+        <div className="space-y-4">
+          <MoodDashboard />
           <div 
-            className="flex items-center justify-between px-5 py-4"
-            style={{ borderBottom: '1px solid var(--border)' }}
+            className="rounded-xl overflow-hidden"
+            style={{
+              backgroundColor: 'var(--card)',
+              border: '1px solid var(--border)',
+            }}
           >
-            <div className="flex items-center gap-3">
-              <div className="accent-line" />
-              <h2 
-                className="text-base font-semibold"
-                style={{ 
-                  fontFamily: 'var(--font-heading)',
-                  color: 'var(--text-primary)'
-                }}
-              >
-                Quick Links
-              </h2>
+            <div 
+              className="flex items-center justify-between px-5 py-4"
+              style={{ borderBottom: '1px solid var(--border)' }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="accent-line" />
+                <h2 
+                  className="text-base font-semibold"
+                  style={{ 
+                    fontFamily: 'var(--font-heading)',
+                    color: 'var(--text-primary)'
+                  }}
+                >
+                  Quick Links
+                </h2>
+              </div>
             </div>
-          </div>
           <div className="p-4 grid grid-cols-2 gap-2">
             {[
               { href: "/cron", icon: Calendar, label: "Cron Jobs", color: "#a78bfa" },

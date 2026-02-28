@@ -109,6 +109,15 @@ body {
   background: var(--text-secondary);
 }
 
+/* Mood Dashboard emoji animation */
+@keyframes mood-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.mood-emoji {
+  animation: mood-float 2.5s ease-in-out infinite;
+}
+
 /* Heading styles */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-heading);

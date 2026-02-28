@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { RichDescription } from "./RichDescription";
 
-interface Activity {
+export interface Activity {
   id: string;
   timestamp: string;
   type: string;
@@ -64,9 +64,20 @@ const statusConfig: Record<string, {
 
 interface ActivityFeedProps {
   limit?: number;
+  /** If true, subscribe to /api/activities/stream (SSE) for live updates */
+  realtime?: boolean;
+  /** Optional callback to reflect a \"working\" state when new activity arrives */
+  onWorkStateChange?: (isWorking: boolean) => void;
+  /** Optional callback fired for each newly streamed activity */
+  onNewActivity?: (activity: Activity) => void;
 }
 
-export function ActivityFeed({ limit = 10 }: ActivityFeedProps) {
+export function ActivityFeed({
+  limit = 10,
+  realtime = false,
+  onWorkStateChange,
+  onNewActivity,
+}: ActivityFeedProps) {
   const [activities, setActivities] = useState<Activity[] | null>(null);
 
   useEffect(() => {
@@ -75,6 +86,83 @@ export function ActivityFeed({ limit = 10 }: ActivityFeedProps) {
       .then((data: ActivitiesResponse) => setActivities(data.activities))
       .catch(() => setActivities([]));
   }, [limit]);
+
+  useEffect(() => {
+    if (!realtime) return;
+
+    const evtSource = new EventSource("/api/activities/stream");
+    let workTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const bumpWorking = () => {
+      if (!onWorkStateChange) return;
+      onWorkStateChange(true);
+      if (workTimeout) clearTimeout(workTimeout);
+      workTimeout = setTimeout(() => {
+        onWorkStateChange(false);
+      }, 30000);
+    };
+
+    evtSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "connected") {
+          return;
+        }
+
+        if (data.type === "batch" && Array.isArray(data.activities)) {
+          setActivities((prev) => {
+            // Prefer streamed batch, but keep existing if already loaded
+            if (prev && prev.length > 0) return prev;
+            return data.activities.slice(0, limit);
+          });
+          return;
+        }
+
+        if (data.type === "new" && data.activity) {
+          const incoming: Activity = data.activity;
+
+          setActivities((prev) => {
+            const current = prev ?? [];
+            const merged = [incoming, ...current];
+            const seen = new Set<string>();
+            const deduped: Activity[] = [];
+            for (const a of merged) {
+              if (!seen.has(a.id)) {
+                seen.add(a.id);
+                deduped.push(a);
+              }
+            }
+            return deduped.slice(0, limit);
+          });
+
+          if (onNewActivity) {
+            onNewActivity(incoming);
+          }
+          bumpWorking();
+        }
+      } catch {
+        // swallow parse errors, SSE will keep streaming
+      }
+    };
+
+    evtSource.onerror = () => {
+      try {
+        evtSource.close();
+      } catch {
+        // ignore
+      }
+    };
+
+    return () => {
+      try {
+        evtSource.close();
+      } catch {
+        // ignore
+      }
+      if (workTimeout) clearTimeout(workTimeout);
+    };
+  }, [realtime, limit, onWorkStateChange, onNewActivity]);
 
   if (!activities) {
     return (
