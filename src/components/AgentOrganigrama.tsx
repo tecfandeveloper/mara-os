@@ -20,7 +20,7 @@ const roleById: Record<string, string> = {
   mara: "Orquestadora",
   atlas: "Asistente personal",
   arvis: "Creatividad y contenido",
-  scout: "Investigación",
+  scout: "Value Investor",
 };
 
 const capabilitiesById: Record<string, string[]> = {
@@ -28,7 +28,7 @@ const capabilitiesById: Record<string, string[]> = {
   mara: ["Routing", "Priorización", "QA"],
   atlas: ["Calendario", "Notas", "Tareas"],
   arvis: ["Ideas", "Copies", "Optimización"],
-  scout: ["Research", "Síntesis", "Comparativas"],
+  scout: ["Acciones", "Cripto", "Valoración"],
 };
 
 function getDisplayName(agent: Agent) {
