@@ -20,6 +20,7 @@ import {
   FlaskConical,
   Boxes,
   ChevronRight,
+  Newspaper,
 } from "lucide-react";
 
 const coreItems = [
@@ -59,6 +60,7 @@ const folders = [
       { href: "/office", icon: Building2, label: "Office" },
       { href: "/workspace-3d", icon: Boxes, label: "Workspace 3D" },
       { href: "/playground", icon: FlaskConical, label: "Model Playground" },
+      { href: "/ia-tech-news", icon: Newspaper, label: "IA/Tech News" },
       { href: "/notifications-log", icon: MessageSquare, label: "Notifications Log" },
     ],
   },
