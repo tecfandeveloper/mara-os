@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Filter,
   Newspaper,
@@ -32,6 +32,8 @@ interface NewsItem {
   fecha: string; // ISO
   resumen: string;
   temas: string[];
+  categoria?: string;
+  url?: string;
   marcadoPara?: Canal | "Ambos";
   descartada?: boolean;
 }
@@ -40,9 +42,9 @@ interface DraftEntry {
   id: string;
   newsId: string;
   tituloNoticia: string;
-  canal: Canal;
+  canal: "X" | "LinkedIn";
   estado: EstadoBorrador;
-  obsidianRef: string; // ruta o nombre de nota (placeholder)
+  obsidianRef: string;
 }
 
 const ESTADO_LABELS: Record<EstadoBorrador, string> = {
@@ -63,6 +65,64 @@ export default function IATechNewsPage() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [drafts, setDrafts] = useState<DraftEntry[]>([]);
   const [showDescartadas, setShowDescartadas] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  async function loadData(refresh = false) {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/ia-tech-news${refresh ? "?refresh=1" : ""}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("No se pudo cargar IA/Tech News");
+      const data = await res.json();
+      setNews(data.news || []);
+      setDrafts(data.drafts || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function runAction(action: "x" | "linkedin" | "ambos" | "descartar", item: NewsItem) {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/ia-tech-news", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newsId: item.id, action }),
+      });
+      if (!res.ok) throw new Error("No se pudo aplicar la acción");
+      const data = await res.json();
+      setNews(data.news || []);
+      setDrafts(data.drafts || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function markReviewed(draftId: string) {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/ia-tech-news", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "mark_reviewed", draftId }),
+      });
+      if (!res.ok) throw new Error("No se pudo marcar como revisado");
+      const data = await res.json();
+      setNews(data.news || []);
+      setDrafts(data.drafts || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadData(true);
+  }, []);
 
   // Filtrado por fecha (lógica local para la UI)
   const filteredNews = useMemo(() => {
@@ -96,74 +156,6 @@ export default function IATechNewsPage() {
     [news]
   );
 
-  const handleMarcarX = (item: NewsItem) => {
-    setNews((prev) =>
-      prev.map((n) => (n.id === item.id ? { ...n, marcadoPara: "X" as Canal } : n))
-    );
-    setDrafts((prev) => {
-      const existing = prev.find((d) => d.newsId === item.id && d.canal === "X");
-      if (existing) return prev;
-      return [
-        ...prev,
-        {
-          id: `d-${item.id}-x-${Date.now()}`,
-          newsId: item.id,
-          tituloNoticia: item.titulo,
-          canal: "X",
-          estado: "pendiente_redacción" as EstadoBorrador,
-          obsidianRef: `Content/IA/${item.titulo.slice(0, 30).replace(/\s+/g, "-")}.md`,
-        },
-      ];
-    });
-  };
-
-  const handleMarcarLinkedIn = (item: NewsItem) => {
-    setNews((prev) =>
-      prev.map((n) => (n.id === item.id ? { ...n, marcadoPara: "LinkedIn" as Canal } : n))
-    );
-    setDrafts((prev) => {
-      const existing = prev.find((d) => d.newsId === item.id && d.canal === "LinkedIn");
-      if (existing) return prev;
-      return [
-        ...prev,
-        {
-          id: `d-${item.id}-li-${Date.now()}`,
-          newsId: item.id,
-          tituloNoticia: item.titulo,
-          canal: "LinkedIn",
-          estado: "pendiente_redacción" as EstadoBorrador,
-          obsidianRef: `Content/IA/${item.titulo.slice(0, 30).replace(/\s+/g, "-")}.md`,
-        },
-      ];
-    });
-  };
-
-  const handleMarcarAmbos = (item: NewsItem) => {
-    setNews((prev) =>
-      prev.map((n) => (n.id === item.id ? { ...n, marcadoPara: "Ambos" as Canal } : n))
-    );
-    setDrafts((prev) => {
-      const existing = prev.find((d) => d.newsId === item.id && d.canal === "Ambos");
-      if (existing) return prev;
-      return [
-        ...prev,
-        {
-          id: `d-${item.id}-ambos-${Date.now()}`,
-          newsId: item.id,
-          tituloNoticia: item.titulo,
-          canal: "Ambos",
-          estado: "pendiente_redacción" as EstadoBorrador,
-          obsidianRef: `Content/IA/${item.titulo.slice(0, 30).replace(/\s+/g, "-")}.md`,
-        },
-      ];
-    });
-  };
-
-  const handleDescartar = (item: NewsItem) => {
-    setNews((prev) =>
-      prev.map((n) => (n.id === item.id ? { ...n, descartada: true } : n))
-    );
-  };
 
   const applyDatePreset = (preset: DatePreset) => {
     setDatePreset(preset);
@@ -187,9 +179,27 @@ export default function IATechNewsPage() {
         >
           IA / Tech News
         </h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
-          Filtra noticias, márcalas para contenido y revisa el estado de borradores en Obsidian. Mara y Obsidian se encargan de los borradores.
-        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p style={{ color: "var(--text-secondary)", fontSize: "0.875rem" }}>
+            Filtra noticias, márcalas para contenido y revisa el estado de borradores en Obsidian.
+          </p>
+          <button
+            onClick={() => loadData(true)}
+            disabled={loading}
+            style={{
+              padding: "0.35rem 0.75rem",
+              borderRadius: "var(--radius-md)",
+              border: "1px solid var(--border)",
+              backgroundColor: "var(--surface-elevated)",
+              color: "var(--text-secondary)",
+              fontSize: "0.75rem",
+              opacity: loading ? 0.7 : 1,
+              cursor: loading ? "wait" : "pointer",
+            }}
+          >
+            {loading ? "Actualizando…" : "Actualizar feeds"}
+          </button>
+        </div>
       </header>
 
       {/* Panel A: Filtros y resumen */}
@@ -421,7 +431,7 @@ export default function IATechNewsPage() {
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
-                        onClick={() => handleMarcarX(item)}
+                        onClick={() => runAction("x", item)}
                         title="Marcar para contenido X"
                         style={{
                           display: "inline-flex",
@@ -442,7 +452,7 @@ export default function IATechNewsPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleMarcarLinkedIn(item)}
+                        onClick={() => runAction("linkedin", item)}
                         title="Marcar para contenido LinkedIn"
                         style={{
                           display: "inline-flex",
@@ -463,7 +473,7 @@ export default function IATechNewsPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleMarcarAmbos(item)}
+                        onClick={() => runAction("ambos", item)}
                         title="Ambos canales"
                         style={{
                           display: "inline-flex",
@@ -484,7 +494,7 @@ export default function IATechNewsPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDescartar(item)}
+                        onClick={() => runAction("descartar", item)}
                         title="Descartar"
                         style={{
                           display: "inline-flex",
@@ -588,7 +598,23 @@ export default function IATechNewsPage() {
                         </span>
                       </td>
                       <td className="px-3 py-2 text-xs font-mono" style={{ color: "var(--text-muted)" }}>
-                        {d.obsidianRef}
+                        <div>{d.obsidianRef}</div>
+                        {d.estado !== "revisado_por_kike" && (
+                          <button
+                            onClick={() => markReviewed(d.id)}
+                            style={{
+                              marginTop: 6,
+                              fontSize: "0.7rem",
+                              border: "1px solid var(--border)",
+                              borderRadius: "var(--radius-sm)",
+                              padding: "2px 6px",
+                              color: "var(--text-secondary)",
+                              background: "var(--surface-elevated)",
+                            }}
+                          >
+                            Marcar revisado por Kike
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))
