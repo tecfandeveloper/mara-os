@@ -45,51 +45,6 @@ interface DraftEntry {
   obsidianRef: string; // ruta o nombre de nota (placeholder)
 }
 
-// --- Mock data ---
-
-const MOCK_NEWS: NewsItem[] = [
-  {
-    id: "n1",
-    titulo: "GPT-5 preview: multimodal reasoning and longer context",
-    fuente: "Web",
-    fecha: new Date().toISOString(),
-    resumen: "OpenClaw resumen: Nuevo modelo con ventana de contexto ampliada y mejor razonamiento en código e imágenes.",
-    temas: ["LLMs", "IA"],
-  },
-  {
-    id: "n2",
-    titulo: "Claude 4 Opus ya disponible en API",
-    fuente: "Newsletter",
-    fecha: subDays(new Date(), 1).toISOString(),
-    resumen: "Anthropic anuncia disponibilidad general del modelo flagship para desarrolladores.",
-    temas: ["LLMs", "Negocio"],
-  },
-  {
-    id: "n3",
-    titulo: "Cursor Rules: best practices for agent-native apps",
-    fuente: "X",
-    fecha: new Date().toISOString(),
-    resumen: "Guía práctica para definir reglas que mejoren el comportamiento de agentes en el editor.",
-    temas: ["Agentes", "DevTools"],
-  },
-  {
-    id: "n4",
-    titulo: "Cloudflare Workers AI: new embedding models",
-    fuente: "RSS",
-    fecha: new Date().toISOString(),
-    resumen: "Nuevos modelos de embeddings y mejor latencia en el edge.",
-    temas: ["Infra", "IA"],
-  },
-  {
-    id: "n5",
-    titulo: "Vercel AI SDK 4.0 with streaming and tools",
-    fuente: "Web",
-    fecha: subDays(new Date(), 2).toISOString(),
-    resumen: "Actualización mayor con soporte nativo para tool calling y streaming estructurado.",
-    temas: ["DevTools", "IA"],
-  },
-];
-
 const ESTADO_LABELS: Record<EstadoBorrador, string> = {
   pendiente_redacción: "Pendiente redacción",
   borrador_en_obsidian: "Borrador en Obsidian",
@@ -105,25 +60,8 @@ export default function IATechNewsPage() {
   const [filterFuente, setFilterFuente] = useState<string>("");
   const [filterTema, setFilterTema] = useState<string>("");
 
-  const [news, setNews] = useState<NewsItem[]>(() => [...MOCK_NEWS]);
-  const [drafts, setDrafts] = useState<DraftEntry[]>(() => [
-    {
-      id: "d1",
-      newsId: "n1",
-      tituloNoticia: "GPT-5 preview: multimodal reasoning and longer context",
-      canal: "X",
-      estado: "pendiente_redacción",
-      obsidianRef: "Content/IA/GPT-5-preview.md",
-    },
-    {
-      id: "d2",
-      newsId: "n3",
-      tituloNoticia: "Cursor Rules: best practices for agent-native apps",
-      canal: "Ambos",
-      estado: "borrador_en_obsidian",
-      obsidianRef: "Content/IA/Cursor-Rules-best-practices.md",
-    },
-  ]);
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [drafts, setDrafts] = useState<DraftEntry[]>([]);
   const [showDescartadas, setShowDescartadas] = useState(false);
 
   // Filtrado por fecha (lógica local para la UI)
