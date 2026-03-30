@@ -21,6 +21,7 @@ import {
   Boxes,
   ChevronRight,
   Newspaper,
+  KanbanSquare,
 } from "lucide-react";
 
 const coreItems = [
@@ -47,6 +48,7 @@ const folders = [
     label: "Resources",
     items: [
       { href: "/memory", icon: Brain, label: "Memory" },
+      { href: "/kanban", icon: KanbanSquare, label: "Kanban" },
       { href: "/files", icon: FolderOpen, label: "Files" },
       { href: "/skills", icon: Puzzle, label: "Skills" },
       { href: "/subagents", icon: Bot, label: "Sub-Agents" },

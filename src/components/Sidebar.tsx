@@ -31,6 +31,7 @@ import {
   MessageSquare,
   Bot,
   Network,
+  KanbanSquare,
 } from "lucide-react";
 import { getAgentDisplayName } from "@/config/branding";
 
@@ -46,6 +47,7 @@ const navItems = [
   { href: "/workflows", label: "Workflows", icon: Workflow },
   { href: "/activity", label: "Activity", icon: Activity },
   { href: "/memory", label: "Memory", icon: Brain },
+  { href: "/kanban", label: "Kanban", icon: KanbanSquare },
   { href: "/files", label: "Files", icon: FolderOpen },
   { href: "/cron", label: "Cron Jobs", icon: Timer },
   { href: "/sessions", label: "Sessions", icon: History },
