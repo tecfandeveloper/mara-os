@@ -360,7 +360,6 @@ Check [ROADMAP.md](./ROADMAP.md) first - it might already be planned!
 
 ## Questions?
 
-- **Discord**: [OpenClaw Community](https://discord.com/invite/clawd)
 - **GitHub Discussions**: For general questions
 - **GitHub Issues**: For bug reports and feature requests
 

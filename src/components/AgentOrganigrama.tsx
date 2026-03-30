@@ -20,7 +20,7 @@ const roleById: Record<string, string> = {
   mara: "Orquestadora",
   atlas: "Asistente personal",
   arvis: "Creatividad y contenido",
-  scout: "Value Investor",
+  scout: "Research e inversión",
 };
 
 const capabilitiesById: Record<string, string[]> = {
@@ -28,7 +28,7 @@ const capabilitiesById: Record<string, string[]> = {
   mara: ["Routing", "Priorización", "QA"],
   atlas: ["Calendario", "Notas", "Tareas"],
   arvis: ["Ideas", "Copies", "Optimización"],
-  scout: ["Acciones", "Cripto", "Valoración"],
+  scout: ["Research", "Mercados", "Valoración"],
 };
 
 function getDisplayName(agent: Agent) {
@@ -59,7 +59,7 @@ export function AgentOrganigrama({ agents }: AgentOrganigramaProps) {
           Meet the Team
         </div>
         <div style={{ color: "var(--text-muted)", fontSize: "0.88rem", marginTop: 4 }}>
-          Mara dirige. Atlas, Arvis y Scout ejecutan por especialidad.
+          Mara dirige. Atlas, Arvis y Warren ejecutan por especialidad.
         </div>
       </div>
 
