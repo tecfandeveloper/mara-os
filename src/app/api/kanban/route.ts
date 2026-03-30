@@ -31,6 +31,13 @@ function getVaultPath() {
   return first?.path || null;
 }
 
+function normalizeCardText(text: string) {
+  return text
+    .replace(/^>\s*\[!.*?\]\s*/i, "")
+    .replace(/^\[\[|\]\]$/g, "")
+    .trim();
+}
+
 function parseKanban(content: string) {
   const columns: Record<ColumnKey, Card[]> = {
     backlog: [],
@@ -54,7 +61,16 @@ function parseKanban(content: string) {
     if (task && current) {
       columns[current].push({
         checked: task[1].toLowerCase() === "x",
-        text: task[2].trim(),
+        text: normalizeCardText(task[2]),
+      });
+      continue;
+    }
+
+    const pluginCard = line.match(/^-\s+(.*)$/);
+    if (pluginCard && current && pluginCard[1].trim() && !pluginCard[1].trim().startsWith("%%")) {
+      columns[current].push({
+        checked: false,
+        text: normalizeCardText(pluginCard[1]),
       });
     }
   }
@@ -69,7 +85,7 @@ export async function GET() {
       return NextResponse.json({ error: "Obsidian vault not found" }, { status: 404 });
     }
 
-    const kanbanPath = join(vaultPath, "MaraOs", "Kanban.md");
+    const kanbanPath = join(vaultPath, "MaraOs", "SystemFiles", "Kanban-General.md");
     if (!existsSync(kanbanPath)) {
       return NextResponse.json({ error: "Kanban file not found", path: kanbanPath }, { status: 404 });
     }
@@ -82,6 +98,7 @@ export async function GET() {
       source: kanbanPath,
       columns,
       counts,
+      format: content.includes("kanban-plugin: board") ? "obsidian-kanban-plugin" : "markdown",
       updatedAt: new Date().toISOString(),
     });
   } catch (error) {
